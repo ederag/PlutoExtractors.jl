@@ -1,0 +1,13 @@
+name = "PlutoExtracters"
+uuid = "25cc9095-8c7a-4c84-8905-c5de52e7766c"
+authors = ["ederag <edera@gmx.fr> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1.6"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
