@@ -34,7 +34,7 @@ but from anywhere else (a script, the REPL, ...).
 ### Example
 Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
 here is how to make a function that return the value `c` from any given `a`:
-```jldoctest
+```julia
 julia> using PlutoExtracters: load_nb_with_topology, @nb_extract
 julia> source_path = pkgdir(PlutoExtracters,
 	"test", "notebooks", "source_basic.jl"
