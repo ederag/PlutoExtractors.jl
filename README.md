@@ -1,5 +1,7 @@
 # PlutoExtracters
 
+[![Build Status](https://github.com/ederag/PlutoExtracters.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/ederag/PlutoExtracters.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+
 ## Feature
 
 Create a function out of a `Pluto` notebook, based on a template.
