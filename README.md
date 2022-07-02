@@ -60,9 +60,6 @@ More examples can be found in the test/notebooks/extract_from_*.jl Pluto noteboo
 This is early alpha stage, for the adventurous, and for early feedback.
 Work is under way to make it more robust.
 
-The heavy work is done by
+Note: the heavy work is done by
 [MacroTools.jl](https://github.com/FluxML/MacroTools.jl)
-and [Pluto.jl](https://github.com/fonsp/Pluto.jl) internals,
-but we might need a finer granularity (at the symbol rather than the cell level),
-to handle cases where the same cell defines two variables:
-one that is given, and one that is needed.
+and [Pluto.jl](https://github.com/fonsp/Pluto.jl) internals.
