@@ -229,12 +229,18 @@ macro nb_extract(nb, template)
 	# so the following can only be done at runtime.
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
-		extracted_block = nb_extracter_body(
+		local extracted_block = nb_extracter_body(
 			$(esc(nb));
 			given=$given,
 			outputs=$outputs
 		)
 		prepend!($d[:body].args, extracted_block.args)
+
+		if false
+			# equivalent to f(a, b, c) = nothing
+			global $(esc(template.args[begin])) = nothing
+		end
+
 		$__module__.eval(MacroTools.combinedef($d))
 	end
 end
