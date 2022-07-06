@@ -91,6 +91,25 @@ fun_a_out_nt_b_c(2)
 # ╔═╡ aba92ba2-cd8d-4f87-ad81-892dceed3aa6
 PlutoTest.@test fun_a_out_nt_b_c(2) == (; b = 4, c = 8)
 
+# ╔═╡ 140e69f8-d458-4086-ba1b-e8dbb45b5fb4
+md"""
+## Keyword argument
+"""
+
+# ╔═╡ 66929e56-fb7f-49fe-a0ce-b4a58b558b37
+@nb_extract(
+	nb,
+	function fun_6(; a=2)
+		return c
+	end
+)
+
+# ╔═╡ 7e987ccc-5a5b-44bf-a1bf-33564d8d24b4
+PlutoTest.@test fun_6() == 8
+
+# ╔═╡ 28d6de40-6267-49c0-9d61-cdc06c66e413
+PlutoTest.@test fun_6(; a = 3) == 12
+
 # ╔═╡ 8be6bb27-98c6-4e86-b0b8-7f66693395b6
 md"""
 # Scopes
@@ -153,6 +172,10 @@ PlutoTest.@test_throws MethodError fun_5(2.0)
 # ╠═abfcb9bd-8c20-47a9-9f1c-12e75426d6df
 # ╠═8adbfdd7-a8bb-48a0-bbfa-8a66d80d45da
 # ╠═aba92ba2-cd8d-4f87-ad81-892dceed3aa6
+# ╠═140e69f8-d458-4086-ba1b-e8dbb45b5fb4
+# ╠═66929e56-fb7f-49fe-a0ce-b4a58b558b37
+# ╠═7e987ccc-5a5b-44bf-a1bf-33564d8d24b4
+# ╠═28d6de40-6267-49c0-9d61-cdc06c66e413
 # ╠═8be6bb27-98c6-4e86-b0b8-7f66693395b6
 # ╠═02e44c02-d427-4646-afdc-b52f1e5a9595
 # ╠═34e19103-389b-4dec-bb75-bb6b46a18a18
