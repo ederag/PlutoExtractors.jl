@@ -133,10 +133,10 @@ strip_types(x::Symbol) = x
 # This function is used to be able to strip types from the extracted arguments to forward the function call to the gensymed one
 # We want to do something like `fun(a::Something) = MODULE.#xxx#fun(a)`
 function strip_types(x::Expr)::Symbol
-	if Meta.isexpr(x, :(::))
-		return x.args[1] # In case of expr of type x::Something, just return x
+	if Meta.isexpr(x, [:(::), :kw])
+		return strip_types(x.args[1]) # We recursively call strip_types till we reach the symbol or we error
 	else
-		error("This function should only receive either symbols or Expr of the type `x::Something`. Instead `$x` was given as input")
+		error("This function should only receive either symbols or Expr of the type `x::Something`, `x=something` or `x::Something=something`. Instead `$x` was given as input")
 	end
 end
 
