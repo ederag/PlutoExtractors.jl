@@ -113,6 +113,25 @@ PlutoTest.@test res_inner == 12
 # ╔═╡ 3d7cf541-1806-4340-bfdd-2b310a998df3
 PlutoTest.@test @isdefined(inner_fun) === false
 
+# ╔═╡ 20726353-e75e-4da5-94f6-2247e9e51347
+md"""
+# Types
+"""
+
+# ╔═╡ 484fb80e-2722-42b9-bb39-6f2cade9b076
+@nb_extract(
+	nb,
+	function fun_5(a::Int)
+		return c
+	end
+)
+
+# ╔═╡ 88a74364-04b6-4083-a584-eafcdea3e73c
+PlutoTest.@test fun_5(2) == 8
+
+# ╔═╡ f4410aeb-b742-4732-9789-640ec466637a
+PlutoTest.@test_throws MethodError fun_5(2.0)
+
 # ╔═╡ Cell order:
 # ╠═64f6372a-eff1-11ec-2395-31d68eda5f3a
 # ╠═0758f6c1-f7e0-4f9e-911a-c5d21f4b0d50
@@ -138,3 +157,7 @@ PlutoTest.@test @isdefined(inner_fun) === false
 # ╠═02e44c02-d427-4646-afdc-b52f1e5a9595
 # ╠═34e19103-389b-4dec-bb75-bb6b46a18a18
 # ╠═3d7cf541-1806-4340-bfdd-2b310a998df3
+# ╠═20726353-e75e-4da5-94f6-2247e9e51347
+# ╠═484fb80e-2722-42b9-bb39-6f2cade9b076
+# ╠═88a74364-04b6-4083-a584-eafcdea3e73c
+# ╠═f4410aeb-b742-4732-9789-640ec466637a
