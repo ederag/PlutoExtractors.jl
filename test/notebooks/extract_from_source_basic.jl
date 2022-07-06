@@ -91,6 +91,28 @@ fun_a_out_nt_b_c(2)
 # ╔═╡ aba92ba2-cd8d-4f87-ad81-892dceed3aa6
 PlutoTest.@test fun_a_out_nt_b_c(2) == (; b = 4, c = 8)
 
+# ╔═╡ 8be6bb27-98c6-4e86-b0b8-7f66693395b6
+md"""
+# Scopes
+"""
+
+# ╔═╡ 02e44c02-d427-4646-afdc-b52f1e5a9595
+res_inner = let
+	@nb_extract(
+		nb,
+		function inner_fun(a)
+			return c
+		end
+	)
+	inner_fun(3)
+end
+
+# ╔═╡ 34e19103-389b-4dec-bb75-bb6b46a18a18
+PlutoTest.@test res_inner == 12
+
+# ╔═╡ 3d7cf541-1806-4340-bfdd-2b310a998df3
+PlutoTest.@test @isdefined(inner_fun) === false
+
 # ╔═╡ Cell order:
 # ╠═64f6372a-eff1-11ec-2395-31d68eda5f3a
 # ╠═0758f6c1-f7e0-4f9e-911a-c5d21f4b0d50
@@ -112,3 +134,7 @@ PlutoTest.@test fun_a_out_nt_b_c(2) == (; b = 4, c = 8)
 # ╠═abfcb9bd-8c20-47a9-9f1c-12e75426d6df
 # ╠═8adbfdd7-a8bb-48a0-bbfa-8a66d80d45da
 # ╠═aba92ba2-cd8d-4f87-ad81-892dceed3aa6
+# ╠═8be6bb27-98c6-4e86-b0b8-7f66693395b6
+# ╠═02e44c02-d427-4646-afdc-b52f1e5a9595
+# ╠═34e19103-389b-4dec-bb75-bb6b46a18a18
+# ╠═3d7cf541-1806-4340-bfdd-2b310a998df3
