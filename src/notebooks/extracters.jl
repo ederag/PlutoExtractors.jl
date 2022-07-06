@@ -126,6 +126,20 @@ function nb_extracter(nb::Pluto.Notebook; given=[], outputs=[])
 	)
 end
 
+# ╔═╡ ba256080-73fb-4de4-be72-101318c82029
+strip_types(x::Symbol) = x
+
+# ╔═╡ feadac3a-859c-4915-bfc6-8fa607d6b606
+# This function is used to be able to strip types from the extracted arguments to forward the function call to the gensymed one
+# We want to do something like `fun(a::Something) = MODULE.#xxx#fun(a)`
+function strip_types(x::Expr)::Symbol
+	if Meta.isexpr(x, [:(::), :kw])
+		return strip_types(x.args[1]) # We recursively call strip_types till we reach the symbol or we error
+	else
+		error("This function should only receive either symbols or Expr of the type `x::Something`, `x=something` or `x::Something=something`. Instead `$x` was given as input")
+	end
+end
+
 # ╔═╡ c2f701da-aaa7-4af5-bada-5acb05465b3f
 """
     @nb_extract(nb, template)
@@ -225,23 +239,33 @@ macro nb_extract(nb, template)
 			"""))
 	end
 
+	# We gensym the name of the function to be evaluated so it's not easibly accessible directly, in order to make the macro also in let blocks without polluting the global scope
+	gensym_name = gensym(d[:name])
+	# We already create the expression that will be evaluated to map the gensymed function evaluated in the module to the non-gensymed name. This is also useful to trigger Pluto reactivity.
+	expr = let dict = d # Adapted from https://fluxml.ai/MacroTools.jl/dev/utilities/
+		rtype = get(dict, :rtype, :Any)
+		:(function $(dict[:name])($(dict[:args]...);
+		                          $(dict[:kwargs]...))::$rtype where {$(dict[:whereparams]...)}
+		  $(__module__).$(gensym_name)($(strip_types.(dict[:args])...);
+		                          $(strip_types.(dict[:kwargs])...))
+		end)
+	end
+	# We assign the gensym_name to the function name in the dict
+	d[:name] = gensym_name
 	# `nb_extracter_body` needs to know about the real notebook
 	# so the following can only be done at runtime.
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
-		local extracted_block = nb_extracter_body(
-			$(esc(nb));
-			given=$given,
-			outputs=$outputs
-		)
-		prepend!($d[:body].args, extracted_block.args)
-
-		if false
-			# equivalent to f(a, b, c) = nothing
-			global $(esc(template.args[begin])) = nothing
+		let
+			extracted_block = nb_extracter_body(
+				$(esc(nb));
+				given=$given,
+				outputs=$outputs
+			)
+			prepend!($d[:body].args, extracted_block.args)
+			$__module__.eval(MacroTools.combinedef($d))
 		end
-
-		$__module__.eval(MacroTools.combinedef($d))
+		$(esc(expr))
 	end
 end
 
@@ -298,7 +322,7 @@ deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[Downloads]]
-deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
+deps = ["ArgTools", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
 [[ExproniconLite]]
@@ -519,6 +543,8 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
 # ╠═c71b4e52-5d6a-4a82-b465-b755217198e6
 # ╠═ea0ba472-50a3-4ab6-a221-0b710b361fca
+# ╠═ba256080-73fb-4de4-be72-101318c82029
+# ╠═feadac3a-859c-4915-bfc6-8fa607d6b606
 # ╠═c2f701da-aaa7-4af5-bada-5acb05465b3f
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
