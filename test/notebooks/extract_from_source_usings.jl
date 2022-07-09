@@ -14,7 +14,7 @@ begin
 end
 
 # ╔═╡ 640d5a61-0e23-4614-96d7-6d79e015eee3
-using PlutoExtracters
+using PlutoExtractors
 
 # ╔═╡ 63066171-c4e6-46e6-8e63-eb50f6c70ed1
 using LinearAlgebra: dot  # `dot` is needed for the test
@@ -23,7 +23,7 @@ using LinearAlgebra: dot  # `dot` is needed for the test
 import PlutoTest
 
 # ╔═╡ 88334e90-1486-40e2-84d5-8f49eda045fe
-root_dir = pkgdir(PlutoExtracters)
+root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
 source_nb_file = joinpath(root_dir, "test", "notebooks", "source_usings.jl")

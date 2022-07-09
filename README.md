@@ -1,6 +1,6 @@
-# PlutoExtracters
+# PlutoExtractors
 
-[![Build Status](https://github.com/ederag/PlutoExtracters.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/ederag/PlutoExtracters.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Build Status](https://github.com/ederag/PlutoExtractors.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/ederag/PlutoExtractors.jl/actions/workflows/CI.yml?query=branch%3Amaster)
 
 ## Feature
 
@@ -37,8 +37,8 @@ but from anywhere else (a script, the REPL, ...).
 Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
 here is how to make a function that return the value `c` from any given `a`:
 ```julia
-julia> using PlutoExtracters: load_nb_with_topology, @nb_extract
-julia> source_path = pkgdir(PlutoExtracters,
+julia> using PlutoExtractors: load_nb_with_topology, @nb_extract
+julia> source_path = pkgdir(PlutoExtractors,
 	"test", "notebooks", "source_basic.jl"
 )  # to be replaced with the path of your source notebook
 julia> nb = load_nb_with_topology(source_path);

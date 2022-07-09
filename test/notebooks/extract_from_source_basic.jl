@@ -17,13 +17,13 @@ end
   ╠═╡ =#
 
 # ╔═╡ ca7520d3-c140-411d-b80d-c9cb03c7724d
-using PlutoExtracters
+using PlutoExtractors
 
 # ╔═╡ 780d2266-5ca3-413c-b354-6fb8c782bb30
 import PlutoTest
 
 # ╔═╡ 23e9bd17-9d56-4a4d-a76c-03095b959465
-root_dir = pkgdir(PlutoExtracters)
+root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ 35bab28c-477c-43dd-b339-13cfdbf2f33e
 source_nb_file = joinpath(root_dir, "test", "notebooks", "source_basic.jl")
