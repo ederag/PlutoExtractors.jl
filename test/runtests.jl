@@ -1,4 +1,4 @@
-using PlutoExtracters
+using PlutoExtractors
 using Test
 using Pluto
 
@@ -22,7 +22,7 @@ fakeclient = Pluto.ClientSession(:fake, nothing)
 server_session.connected_clients[fakeclient.id] = fakeclient
 
 
-@testset "PlutoExtracters.jl" begin
+@testset "PlutoExtractors.jl" begin
 	@testset "try" begin
 	    include("try.jl")
 	end

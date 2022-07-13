@@ -14,13 +14,13 @@ begin
 end
 
 # ╔═╡ e9956baf-c12b-4f45-8e65-c03b9cc70d77
-using PlutoExtracters
+using PlutoExtractors
 
 # ╔═╡ 85aa7d19-b432-423c-9124-2ec8d8a1f24e
 import PlutoTest
 
 # ╔═╡ 15bb49ff-61f0-40f4-ae45-b9a709bd5c57
-root_dir = pkgdir(PlutoExtracters)
+root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ 818ce446-5aaf-4b71-8068-bf26b86a61f9
 source_nb_file = joinpath(root_dir, "test", "notebooks", "source_consts.jl")

@@ -2,11 +2,11 @@
 # where server_session is defined
 
 @testset "Try" begin
-	source_basic_path = pkgdir(PlutoExtracters, "test", "notebooks", "source_basic.jl")
+	source_basic_path = pkgdir(PlutoExtractors, "test", "notebooks", "source_basic.jl")
 
 	# "# expected" cells produce an output that the next cell should reproduce
 	dest_notebook = Pluto.Notebook([
-		Pluto.Cell("""using PlutoExtracters"""),
+		Pluto.Cell("""using PlutoExtractors"""),
 		Pluto.Cell("""nb = load_nb_with_topology("$(source_basic_path)")"""),
 		Pluto.Cell("""
 			@nb_extract(nb, 

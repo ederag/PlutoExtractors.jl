@@ -90,7 +90,7 @@ function all_needed_cells(nb::Pluto.Notebook, cell; given=[])
 end
 
 # ╔═╡ c71b4e52-5d6a-4a82-b465-b755217198e6
-function nb_extracter_body(nb::Pluto.Notebook; given=[], outputs=[])
+function nb_extractor_body(nb::Pluto.Notebook; given=[], outputs=[])
 	output_cells = find_symbols_cells(nb, outputs)
 	needed_cells = mapreduce(
 		c -> all_needed_cells(nb, c; given),
@@ -119,8 +119,8 @@ function nb_extracter_body(nb::Pluto.Notebook; given=[], outputs=[])
 end
 
 # ╔═╡ ea0ba472-50a3-4ab6-a221-0b710b361fca
-function nb_extracter(nb::Pluto.Notebook; given=[], outputs=[])
-	code = nb_extracter_code(nb; given, outputs)
+function nb_extractor(nb::Pluto.Notebook; given=[], outputs=[])
+	code = nb_extractor_code(nb; given, outputs)
 	return eval(
 		Meta.parse(code)
 	)
@@ -177,8 +177,8 @@ but from anywhere else (a script, the REPL, ...).
 Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
 here is how to make a function that return the value `c` from any given `a`:
 ```jldoctest
-julia> using PlutoExtracters: load_nb_with_topology, @nb_extract
-julia> source_path = pkgdir(PlutoExtracters,
+julia> using PlutoExtractors: load_nb_with_topology, @nb_extract
+julia> source_path = pkgdir(PlutoExtractors,
 	"test", "notebooks", "source_basic.jl"
 )  # to be replaced with the path of your source notebook
 julia> nb = load_nb_with_topology(source_path);
@@ -252,12 +252,12 @@ macro nb_extract(nb, template)
 	end
 	# We assign the gensym_name to the function name in the dict
 	d[:name] = gensym_name
-	# `nb_extracter_body` needs to know about the real notebook
+	# `nb_extractor_body` needs to know about the real notebook
 	# so the following can only be done at runtime.
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
 		let
-			extracted_block = nb_extracter_body(
+			extracted_block = nb_extractor_body(
 				$(esc(nb));
 				given=$given,
 				outputs=$outputs
