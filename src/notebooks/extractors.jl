@@ -12,8 +12,11 @@ using InteractiveUtils
 import Pkg
 
 # ╔═╡ b96bc4ca-f8bf-45a4-bd71-cd30b94d0330
+# ╠═╡ skip_as_script = true
+#=╠═╡
 # Make sure to use the project manifest
 Pkg.activate(Base.current_project())
+  ╠═╡ =#
 
 # ╔═╡ 83dbf999-dfdf-43c8-882b-f11e17e09a3a
 using Pluto
