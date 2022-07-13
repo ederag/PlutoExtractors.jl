@@ -125,6 +125,10 @@ function nb_extractor_body(nb::Pluto.Notebook; given=[], outputs=[])
 	body = MacroTools.postwalk(body) do x
 		MacroTools.isexpr(x, :const) ? only(x.args) : x
 	end
+	# get rid of struct (not allowed in function body)
+	body = MacroTools.postwalk(body) do x
+		MacroTools.isexpr(x, :struct) ? nothing : x
+	end
 	return body
 end
 
