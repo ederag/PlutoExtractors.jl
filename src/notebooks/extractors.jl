@@ -12,12 +12,8 @@ using InteractiveUtils
 import Pkg
 
 # ╔═╡ b96bc4ca-f8bf-45a4-bd71-cd30b94d0330
-# This notebook is run in Pluto while developing PlutoExtractors,
-# and included as a regular julia file by the package.
-if @isdefined PlutoRunner  # running inside Pluto
-	# Make sure to use the project manifest
-	Pkg.activate(Base.current_project())
-end
+# Make sure to use the project manifest
+Pkg.activate(Base.current_project())
 
 # ╔═╡ 83dbf999-dfdf-43c8-882b-f11e17e09a3a
 using Pluto
