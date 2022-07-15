@@ -26,7 +26,7 @@ import PlutoTest
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_structs.jl")
+source_nb_file = joinpath(root_dir, "test", "notebooks", "source_types.jl")
 
 # ╔═╡ 8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 md"""
@@ -34,23 +34,17 @@ md"""
 """
 
 # ╔═╡ 53c808e9-a4bc-4fbc-b186-41532f54e7f8
-md"## Struct
+md"## Types
 "
-
-# ╔═╡ a6162c3a-5bb5-4846-872b-7283496211d1
-# copied by hand from source_structs.jl
-struct TestStruct
-	x::Int64
-end
 
 # ╔═╡ f3ee4c34-3c96-4254-aa07-34d67efaedc3
 nb = load_nb_with_topology(source_nb_file)
 
 # ╔═╡ fafc2698-d303-4ee8-a9d1-a8a1dc523d2b
 md"""
-#### By hand (workaround)
+#### Copied by hand (workaround)
 
-`struct` will need some special handling, as they must be toplevel
+Types will need some special handling, as they must be toplevel
 (they can't be defined inside a function).
 Until then, they have to be copied by hand.
 """
@@ -92,7 +86,6 @@ PlutoTest.@test fun_1() == 2
 # ╠═d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
 # ╠═8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 # ╠═53c808e9-a4bc-4fbc-b186-41532f54e7f8
-# ╠═a6162c3a-5bb5-4846-872b-7283496211d1
 # ╠═f3ee4c34-3c96-4254-aa07-34d67efaedc3
 # ╠═fafc2698-d303-4ee8-a9d1-a8a1dc523d2b
 # ╠═90e0bfa8-9b4c-4be0-9733-e32a7e0ca5c9

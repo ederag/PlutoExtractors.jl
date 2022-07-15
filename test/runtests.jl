@@ -39,7 +39,7 @@ server_session.connected_clients[fakeclient.id] = fakeclient
 		include("notebooks/extract_from_source_consts.jl")
 	end
 
-	@testset "Extract from source_structs.jl" begin
-		include("notebooks/extract_from_source_structs.jl")
+	@testset "Extract from source_types.jl" begin
+		include("notebooks/extract_from_source_types.jl")
 	end
 end
