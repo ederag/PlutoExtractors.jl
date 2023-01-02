@@ -102,6 +102,9 @@ end
 # ╔═╡ c71b4e52-5d6a-4a82-b465-b755217198e6
 function nb_extractor_body(nb::Pluto.Notebook; given=[], outputs=[])
 	output_cells = find_symbols_cells(nb, outputs)
+	isempty(output_cells) && error(
+		"Unable to extract any definition for $outputs"
+	)
 	needed_cells = mapreduce(
 		c -> all_needed_cells(nb, c; given),
 		union,
