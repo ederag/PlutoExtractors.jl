@@ -47,6 +47,9 @@ sub_session = Pluto.ServerSession()
 # ╔═╡ 18838f12-f734-494a-8eff-486228846220
 begin
 	nb = load_nb_with_topology(source_nb_file)
+
+	Pluto.update_run!(sub_session, nb, nb.cells)
+
 	old_workspace_name, _ = 
 		Pluto.WorkspaceManager.bump_workspace_module((sub_session, nb))
 	nb.topology = Pluto.resolve_topology(
