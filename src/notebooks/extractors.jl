@@ -34,9 +34,11 @@ See also [`@nb_extract`](@ref)
 """
 function load_nb_with_topology(path::AbstractString)
 	nb = Pluto.load_notebook_nobackup(String(path))
-	old_tp = nb.topology
-	new_tp = nb.topology = Pluto.updated_topology(old_tp, nb, nb.cells)
-	Pluto.update_dependency_cache!(nb)
+
+	# To handle macros. TODO: room for optimization
+	sub_session = Pluto.ServerSession()
+	Pluto.update_run!(sub_session, nb, nb.cells)
+
 	nb
 end
 
