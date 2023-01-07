@@ -13,6 +13,9 @@ begin
 	using Revise  # just to be sure Revise is called first (is it necessary ?)
 end
 
+# ╔═╡ ef466826-81b7-4f9d-a0e8-f48f0dc63d2f
+using Parameters  # until #11 is fixed
+
 # ╔═╡ 640d5a61-0e23-4614-96d7-6d79e015eee3
 using PlutoExtractors
 
@@ -99,6 +102,7 @@ nb.topology.nodes[unpack_cell].macrocalls
 # ╔═╡ Cell order:
 # ╠═51df9d39-7d35-49e1-bac3-7354882bb141
 # ╠═67aa154f-a294-41ce-aea5-36cf5ddcf1de
+# ╠═ef466826-81b7-4f9d-a0e8-f48f0dc63d2f
 # ╠═640d5a61-0e23-4614-96d7-6d79e015eee3
 # ╠═9f58ade4-c81b-45fb-a497-4f7503b94e13
 # ╠═63066171-c4e6-46e6-8e63-eb50f6c70ed1
