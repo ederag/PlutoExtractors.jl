@@ -26,15 +26,6 @@ PlutoTest.@test c == 3
 # just to check regular extracts
 d = 4
 
-# ╔═╡ 9576878d-46f4-421c-a2e3-b5a109d22f3f
-begin
-k = 2
-@unpack k = (; k = 11)
-end
-
-# ╔═╡ b40c085d-0bd5-4b02-bedb-a694de5d03b6
-k
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -125,7 +116,5 @@ version = "1.0.2"
 # ╠═7bfed1e8-054e-475e-92b6-f926bf5c2855
 # ╠═d424a685-7296-419f-8b18-7b6170d4ee36
 # ╠═195bf3b0-67cd-4d9c-9159-5acea798fb59
-# ╠═9576878d-46f4-421c-a2e3-b5a109d22f3f
-# ╠═b40c085d-0bd5-4b02-bedb-a694de5d03b6
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
