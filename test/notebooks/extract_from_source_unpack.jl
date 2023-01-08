@@ -56,6 +56,21 @@ md"## Regular
 # ╔═╡ 737782bb-ea44-41b4-b467-da42793fd616
 PlutoTest.@test fun1() == (1, 3)
 
+# ╔═╡ d3341aee-be88-4f4c-a25b-7f2342a98591
+md"""
+## Debug
+"""
+
+# ╔═╡ 198d4900-9ae1-456f-b1cf-3c26a2d8249a
+unpack_ac_cell = filter(c -> contains(c.code, "@unpack a, c ="), nb.cells) |> only
+
+# ╔═╡ 1f19f8ec-46e5-48d7-a557-15db25bc12ff
+unpack_ac_node = nb.topology.nodes[unpack_ac_cell]
+
+# ╔═╡ d011ab60-c791-43e4-babc-675be0a8b709
+# true (but should not be part of the test suite)
+unpack_ac_node.definitions == Set([:a, :c])
+
 # ╔═╡ b8bb2593-70f3-4131-9f6c-a5ed559a80b9
 md"""
 ## Workaround
@@ -113,6 +128,10 @@ nb.topology.nodes[unpack_cell].macrocalls
 # ╠═53c808e9-a4bc-4fbc-b186-41532f54e7f8
 # ╠═21f86448-721a-4ffe-a098-1482071de585
 # ╠═737782bb-ea44-41b4-b467-da42793fd616
+# ╠═d3341aee-be88-4f4c-a25b-7f2342a98591
+# ╠═198d4900-9ae1-456f-b1cf-3c26a2d8249a
+# ╠═1f19f8ec-46e5-48d7-a557-15db25bc12ff
+# ╠═d011ab60-c791-43e4-babc-675be0a8b709
 # ╠═b8bb2593-70f3-4131-9f6c-a5ed559a80b9
 # ╠═525f5fcc-efd1-48ef-8aeb-9c184e54a50d
 # ╠═b8879c23-6aec-435a-a875-e30ebd1b4d5a
