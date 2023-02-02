@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.9
+# v0.19.22
 
 using Markdown
 using InteractiveUtils
@@ -8,10 +8,13 @@ using InteractiveUtils
 import Pkg
 
 # ╔═╡ 67aa154f-a294-41ce-aea5-36cf5ddcf1de
+# ╠═╡ skip_as_script = true
+#=╠═╡
 begin
 	Pkg.activate(Base.current_project())
 	using Revise  # just to be sure Revise is called first (is it necessary ?)
 end
+  ╠═╡ =#
 
 # ╔═╡ 640d5a61-0e23-4614-96d7-6d79e015eee3
 using PlutoExtractors
