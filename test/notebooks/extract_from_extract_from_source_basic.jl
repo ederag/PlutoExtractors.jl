@@ -47,7 +47,11 @@ nb = load_nb_with_topology(source_nb_file)
 	end
 )
 
+# ╔═╡ f49f8d22-2b0b-4884-b9be-368dd297fb34
+get_fun1_a()
+
 # ╔═╡ b2b5d93a-faff-4d9f-92da-40bf95efcff6
+# fun1_a = Base.@invokelatest get_fun1_a()
 fun1_a = get_fun1_a()
 
 # ╔═╡ 4c009a24-8098-4803-9396-43598e2c382d
@@ -64,5 +68,6 @@ PlutoTest.@test fun1_a == 1
 # ╟─214a48ea-1769-45c8-b113-bb17a1a766b7
 # ╠═b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
 # ╠═a8ac792a-d83b-48ea-a98b-79c43ef76c2e
+# ╠═f49f8d22-2b0b-4884-b9be-368dd297fb34
 # ╠═b2b5d93a-faff-4d9f-92da-40bf95efcff6
 # ╠═4c009a24-8098-4803-9396-43598e2c382d
