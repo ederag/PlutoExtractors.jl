@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.9
+# v0.19.18
 
 #> [frontmatter]
 #> title = ""
@@ -34,9 +34,11 @@ See also [`@nb_extract`](@ref)
 """
 function load_nb_with_topology(path::AbstractString)
 	nb = Pluto.load_notebook_nobackup(String(path))
-	old_tp = nb.topology
-	new_tp = nb.topology = Pluto.updated_topology(old_tp, nb, nb.cells)
-	Pluto.update_dependency_cache!(nb)
+
+	# To handle macros. TODO: room for optimization
+	sub_session = Pluto.ServerSession()
+	Pluto.update_run!(sub_session, nb, nb.cells)
+
 	nb
 end
 
@@ -102,6 +104,9 @@ end
 # ╔═╡ c71b4e52-5d6a-4a82-b465-b755217198e6
 function nb_extractor_body(nb::Pluto.Notebook; given=[], outputs=[])
 	output_cells = find_symbols_cells(nb, outputs)
+	isempty(output_cells) && error(
+		"Unable to extract any definition for $outputs"
+	)
 	needed_cells = mapreduce(
 		c -> all_needed_cells(nb, c; given),
 		union,
