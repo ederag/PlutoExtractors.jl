@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.18
+# v0.20.8
 
 #> [frontmatter]
 #> title = ""
@@ -23,6 +23,9 @@ using Pluto
 
 # ╔═╡ 8037bbf1-fae0-47a3-a768-a089f21349a8
 using MacroTools
+
+# ╔═╡ 4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
+import PlutoDependencyExplorer as PDE
 
 # ╔═╡ 7e8a7524-1ae6-439d-98c6-5b2390014096
 """
@@ -115,7 +118,7 @@ function nb_extractor_body(nb::Pluto.Notebook; given=[], outputs=[])
 	body = Expr(:block)
 	# runnable lists cells in the correct order
 	# just keep only the needed ones
-	tpo = topological_order(nb)
+	tpo = PDE.topological_order(nb.topology)
 	# runnable first to keep its order
 	for cell in tpo.runnable ∩ needed_cells
 		# this returns a :toplevel expression
@@ -292,6 +295,7 @@ end
 # ╠═3e3102e5-9bbd-4592-a749-821ee5e42c7c
 # ╠═b96bc4ca-f8bf-45a4-bd71-cd30b94d0330
 # ╠═83dbf999-dfdf-43c8-882b-f11e17e09a3a
+# ╠═4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 # ╠═8037bbf1-fae0-47a3-a768-a089f21349a8
 # ╠═7e8a7524-1ae6-439d-98c6-5b2390014096
 # ╠═a8b197ad-765b-475e-9010-d73df9d24c13
