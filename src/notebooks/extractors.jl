@@ -86,18 +86,24 @@ find_symbols_cells(nb::Pluto.Notebook, symbols) = filter(
 )
 
 # ╔═╡ efa1e893-34b0-4a14-a0e2-600a365eb717
-function all_needed_cells(nb::Pluto.Notebook, cell; given=[])
+function all_needed_cells(nb::Pluto.Notebook, cell; given=[], visited=nothing)
 	if all(in(given), symbols_defined(nb, cell))
 		return Set{typeof(cell)}()
 	end
 	# upstream_cells_map is not recursive; it contains only the direct parents
 	cells = Set([cell])
+	if isnothing(visited)
+		visited = [cell]
+	else
+		push!(visited, cell)
+	end
 
 	# upstream_cell_map values contain the list of parent cells
 	# TODO: looks like there is a Pluto.upstream_cells_map(cell)
 	for up_deps in values(cell.cell_dependencies.upstream_cells_map)
 		# each up_deps is a vector of cells
 		for up_dep in up_deps
+			up_dep in visited && continue
 			union!(cells, all_needed_cells(nb, up_dep; given))
 		end
 	end
