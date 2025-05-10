@@ -128,6 +128,11 @@ function all_needed_cells(utp::PDE.NotebookTopology, cell;
 	cells
 end
 
+# ╔═╡ 63c26add-ac5a-4a2c-9779-bd6c9710fe1a
+function remove_trailing_semicolon(str)
+	rstrip(c -> c == ';' || isspace(c), str)
+end
+
 # ╔═╡ e4ecb782-85af-4e66-a7af-72eca79bd191
 function has_usings_imports(ex)
 	(; usings, imports) = compute_usings_imports(ex)
@@ -151,12 +156,13 @@ function nb_extractor_body(utp::PDE.NotebookTopology; given=[], outputs=[])
 	tpo = PDE.topological_order(utp)
 	# runnable first to keep its order
 	for cell in tpo.runnable ∩ needed_cells
-		# this returns a :toplevel expression
-		cell_expr = Meta.parse(cell.code)
-		if !has_usings_imports(cell_expr)
+		# Fix "toplevel expression not at top level"
+		code_str = remove_trailing_semicolon(cell.code)
+		code_expr = Meta.parse(code_str)
+		if !has_usings_imports(code_expr)
 			# `using` and `import` are not allowed in a function.
 			# Just ignore, for now (TODO)
-			push!(body.args, cell_expr)
+			push!(body.args, code_expr)
 		end
 	end
 	# get rid of const (not allowed in function body)
@@ -337,6 +343,7 @@ end
 # ╠═2300d1df-94cd-4f7e-bd0b-07bad790464f
 # ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
 # ╠═c71b4e52-5d6a-4a82-b465-b755217198e6
+# ╠═63c26add-ac5a-4a2c-9779-bd6c9710fe1a
 # ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
 # ╠═ea0ba472-50a3-4ab6-a221-0b710b361fca
 # ╠═ba256080-73fb-4de4-be72-101318c82029
