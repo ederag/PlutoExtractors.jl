@@ -7,9 +7,9 @@
 	# "# expected" cells produce an output that the next cell should reproduce
 	dest_notebook = Pluto.Notebook([
 		Pluto.Cell("""using PlutoExtractors"""),
-		Pluto.Cell("""nb = load_nb_with_topology("$(source_basic_path)")"""),
+		Pluto.Cell("""utp = load_updated_topology("$(source_basic_path)")"""),
 		Pluto.Cell("""
-			@nb_extract(nb, 
+			@nb_extract(utp, 
 				function fun(a)
 					return c
 				end

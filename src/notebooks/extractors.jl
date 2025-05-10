@@ -30,22 +30,33 @@ using MacroTools
 # ╔═╡ 4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 import PlutoDependencyExplorer as PDE
 
+# ╔═╡ c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
+function load_nb_with_topology(path::AbstractString)
+	throw("Dropped in v0.2.0. Please use `load_updated_topology` instead")
+end
+
 # ╔═╡ 7e8a7524-1ae6-439d-98c6-5b2390014096
 """
-    load_nb_with_topology(path)
+    load_updated_topology(path)
 
-Load a `Pluto` notebook, with topology and dependency cache filled.
+Return the topology of a `Pluto` notebook found at `path`,
+with references and definitions filled.
 
 See also [`@nb_extract`](@ref)
 """
-function load_nb_with_topology(path::AbstractString)
+function load_updated_topology(path::AbstractString)
 	nb = Pluto.load_notebook_nobackup(String(path))
 
-	# To handle macros. TODO: room for optimization
-	sub_session = Pluto.ServerSession()
-	Pluto.update_run!(sub_session, nb, nb.cells)
+	empty_topology = PDE.NotebookTopology{Pluto.Cell}()
 
-	nb
+	# cf. https://plutojl.org/en/docs/plutodependencyexplorer/
+	PDE.updated_topology(
+		empty_topology,  # old topology
+		PDE.all_cells(nb.topology),  # notebook cells
+		PDE.all_cells(nb.topology);  # cells to consider (they changed)
+		get_code_str = c -> c.code,
+		get_code_expr = c -> Meta.parse(c.code),
+    )
 end
 
 # ╔═╡ a8b197ad-765b-475e-9010-d73df9d24c13
@@ -69,8 +80,8 @@ find_function_cells(nb::Pluto.Notebook, symbols) = filter(
 )
 
 # ╔═╡ 9fb50a81-390d-44bc-8819-e9ed97d1e0de
-function symbols_defined(nb::Pluto.Notebook, cell)
-	node = nb.topology.nodes[cell]
+function symbols_defined(utp::PDE.NotebookTopology, cell)
+	node = utp.nodes[cell]
 	union(
 		node.definitions,
 		node.funcdefs_with_signatures,
@@ -79,18 +90,21 @@ function symbols_defined(nb::Pluto.Notebook, cell)
 end
 
 # ╔═╡ 2300d1df-94cd-4f7e-bd0b-07bad790464f
-find_symbols_cells(nb::Pluto.Notebook, symbols) = filter(
+find_symbols_cells(utp::PDE.NotebookTopology, symbols) = filter(
 	# TODO: this can surely be simplified now
 	cell -> any(
-		symbol -> symbol in symbols_defined(nb, cell),
+		symbol -> symbol in symbols_defined(utp, cell),
 		symbols
 	),
-	nb.cells
+	PDE.all_cells(utp)
 )
 
 # ╔═╡ efa1e893-34b0-4a14-a0e2-600a365eb717
-function all_needed_cells(nb::Pluto.Notebook, cell; given=[], visited=nothing)
-	if all(in(given), symbols_defined(nb, cell))
+function all_needed_cells(utp::PDE.NotebookTopology, cell;
+	given = [],
+	visited = nothing
+)
+	if all(in(given), symbols_defined(utp, cell))
 		return Set{typeof(cell)}()
 	end
 	# upstream_cells_map is not recursive; it contains only the direct parents
@@ -101,13 +115,14 @@ function all_needed_cells(nb::Pluto.Notebook, cell; given=[], visited=nothing)
 		push!(visited, cell)
 	end
 
-	# upstream_cell_map values contain the list of parent cells
-	# TODO: looks like there is a Pluto.upstream_cells_map(cell)
-	for up_deps in values(cell.cell_dependencies.upstream_cells_map)
-		# each up_deps is a vector of cells
+	node = utp.nodes[cell]
+	for up_deps in PDE.where_assigned(utp, node.references)
+		if up_deps isa Pluto.Cell
+			up_deps = [up_deps]
+		end
 		for up_dep in up_deps
 			up_dep in visited && continue
-			union!(cells, all_needed_cells(nb, up_dep; given))
+			union!(cells, all_needed_cells(utp, up_dep; given))
 		end
 	end
 	cells
@@ -120,28 +135,28 @@ function has_usings_imports(ex)
 end
 
 # ╔═╡ c71b4e52-5d6a-4a82-b465-b755217198e6
-function nb_extractor_body(nb::Pluto.Notebook; given=[], outputs=[])
-	output_cells = find_symbols_cells(nb, outputs)
+function nb_extractor_body(utp::PDE.NotebookTopology; given=[], outputs=[])
+	output_cells = find_symbols_cells(utp, outputs)
 	isempty(output_cells) && error(
 		"Unable to extract any definition for $outputs"
 	)
 	needed_cells = mapreduce(
-		c -> all_needed_cells(nb, c; given),
+		c -> all_needed_cells(utp, c; given),
 		union,
 		output_cells
 	)
 	body = Expr(:block)
 	# runnable lists cells in the correct order
 	# just keep only the needed ones
-	tpo = PDE.topological_order(nb.topology)
+	tpo = PDE.topological_order(utp)
 	# runnable first to keep its order
 	for cell in tpo.runnable ∩ needed_cells
 		# this returns a :toplevel expression
-		cell_expr = Pluto.parse_custom(nb, cell)
-		if !any(ex -> has_usings_imports(ex), cell_expr.args)
+		cell_expr = Meta.parse(cell.code)
+		if !has_usings_imports(cell_expr)
 			# `using` and `import` are not allowed in a function.
 			# Just ignore, for now (TODO)
-			append!(body.args, cell_expr.args)
+			push!(body.args, cell_expr)
 		end
 	end
 	# get rid of const (not allowed in function body)
@@ -179,13 +194,14 @@ end
 
 # ╔═╡ c2f701da-aaa7-4af5-bada-5acb05465b3f
 """
-    @nb_extract(nb, template)
+    @nb_extract(utp, template)
 
-Create a function out of a `Pluto` notebook, based on a template.
+Create a function out of a `Pluto` notebook updated topology,
+based on a template.
 
-The notebook `nb` must be a `Pluto.Notebook`,
-with up-to-date topology and dependency cache
-(for instance from [`load_nb_with_topology`](@ref)).
+The notebook updated topology `utp` must be a `PlutoDependencyExplorer.NotebookTopology{Pluto.Cell}`,
+with up-to-date topology, filled with references and definitions
+(for instance from [`load_updated_topology`](@ref)).
 
 The signature of the returned function is exactly the one of the `template`.
 The argument names must match symbols defined in the notebook.
@@ -197,7 +213,7 @@ This body must consist of a single `return` statement.
 The return value can be a single variable (e.g. ` return c`),
 a tuple (e.g. `return (b, c)`), or a named tuple (e.g. `return (; b = b, whatever = c)`).
 
-The notebook `nb` is then analyzed to find the cells that are necessary
+The updated topology `utp` is then analyzed to find the cells that are necessary
 to evaluate the return value
 (the cells that define `a` and `b` in the last examples).
 
@@ -214,13 +230,13 @@ but from anywhere else (a script, the REPL, ...).
 Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
 here is how to make a function that return the value `c` from any given `a`:
 ```jldoctest
-julia> using PlutoExtractors: load_nb_with_topology, @nb_extract
+julia> using PlutoExtractors: load_updated_topology, @nb_extract
 julia> source_path = pkgdir(PlutoExtractors,
 	"test", "notebooks", "source_basic.jl"
 )  # to be replaced with the path of your source notebook
-julia> nb = load_nb_with_topology(source_path);
+julia> utp = load_updated_topology(source_path);
 julia> @nb_extract(
-	nb,
+	utp,
 	function fun(a)
 		return c
 	end
@@ -231,7 +247,7 @@ julia> fun(2)
 
 See also [`load_nb_with_topology`](@ref)
 """
-macro nb_extract(nb, template)
+macro nb_extract(utp, template)
 	# analysis of the function signature and body
 	d = MacroTools.splitdef(template)
 
@@ -295,7 +311,7 @@ macro nb_extract(nb, template)
 	return quote
 		let
 			extracted_block = nb_extractor_body(
-				$(esc(nb));
+				$(esc(utp));
 				given=$given,
 				outputs=$outputs
 			)
@@ -313,6 +329,7 @@ end
 # ╠═83dbf999-dfdf-43c8-882b-f11e17e09a3a
 # ╠═4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 # ╠═8037bbf1-fae0-47a3-a768-a089f21349a8
+# ╠═c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
 # ╠═7e8a7524-1ae6-439d-98c6-5b2390014096
 # ╠═a8b197ad-765b-475e-9010-d73df9d24c13
 # ╠═447318b6-e302-4f16-b149-52108b4283fe

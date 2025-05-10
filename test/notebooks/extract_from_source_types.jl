@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.9
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -38,7 +38,7 @@ md"## Types
 "
 
 # ╔═╡ f3ee4c34-3c96-4254-aa07-34d67efaedc3
-nb = load_nb_with_topology(source_nb_file)
+utp = load_updated_topology(source_nb_file)
 
 # ╔═╡ fafc2698-d303-4ee8-a9d1-a8a1dc523d2b
 md"""
@@ -65,7 +65,7 @@ md"""
 
 # ╔═╡ 525f5fcc-efd1-48ef-8aeb-9c184e54a50d
 @nb_extract(
-	nb,
+	utp,
 	function fun_1()
 		return b
 	end
