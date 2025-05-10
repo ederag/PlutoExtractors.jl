@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.18
+# v0.19.22
 
 using Markdown
 using InteractiveUtils
@@ -42,16 +42,16 @@ nb = load_nb_with_topology(source_nb_file)
 # ╔═╡ a8ac792a-d83b-48ea-a98b-79c43ef76c2e
 @nb_extract(
 	nb,
-	function fun_out_a()
+	function fun1()
 		return a
 	end
 )
 
 # ╔═╡ b2b5d93a-faff-4d9f-92da-40bf95efcff6
-fun_out_a()
+fun1_a = fun1()
 
 # ╔═╡ 4c009a24-8098-4803-9396-43598e2c382d
-PlutoTest.@test fun_out_a() == 1
+PlutoTest.@test fun1_a == 1
 
 # ╔═╡ 4bb38b42-207f-4219-b1eb-3ca9a0c792d1
 md"""

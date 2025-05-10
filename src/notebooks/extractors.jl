@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.18
+# v0.20.8
 
 #> [frontmatter]
 #> title = ""
@@ -18,11 +18,17 @@ import Pkg
 Pkg.activate(Base.current_project())
   ╠═╡ =#
 
+# ╔═╡ 0c9f04da-2e65-4b82-ac1e-1520391572a2
+using ExpressionExplorer
+
 # ╔═╡ 83dbf999-dfdf-43c8-882b-f11e17e09a3a
 using Pluto
 
 # ╔═╡ 8037bbf1-fae0-47a3-a768-a089f21349a8
 using MacroTools
+
+# ╔═╡ 4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
+import PlutoDependencyExplorer as PDE
 
 # ╔═╡ 7e8a7524-1ae6-439d-98c6-5b2390014096
 """
@@ -83,22 +89,34 @@ find_symbols_cells(nb::Pluto.Notebook, symbols) = filter(
 )
 
 # ╔═╡ efa1e893-34b0-4a14-a0e2-600a365eb717
-function all_needed_cells(nb::Pluto.Notebook, cell; given=[])
+function all_needed_cells(nb::Pluto.Notebook, cell; given=[], visited=nothing)
 	if all(in(given), symbols_defined(nb, cell))
 		return Set{typeof(cell)}()
 	end
 	# upstream_cells_map is not recursive; it contains only the direct parents
 	cells = Set([cell])
+	if isnothing(visited)
+		visited = [cell]
+	else
+		push!(visited, cell)
+	end
 
 	# upstream_cell_map values contain the list of parent cells
 	# TODO: looks like there is a Pluto.upstream_cells_map(cell)
 	for up_deps in values(cell.cell_dependencies.upstream_cells_map)
 		# each up_deps is a vector of cells
 		for up_dep in up_deps
+			up_dep in visited && continue
 			union!(cells, all_needed_cells(nb, up_dep; given))
 		end
 	end
 	cells
+end
+
+# ╔═╡ e4ecb782-85af-4e66-a7af-72eca79bd191
+function has_usings_imports(ex)
+	(; usings, imports) = compute_usings_imports(ex)
+	!isempty(usings) || !isempty(imports)
 end
 
 # ╔═╡ c71b4e52-5d6a-4a82-b465-b755217198e6
@@ -115,12 +133,12 @@ function nb_extractor_body(nb::Pluto.Notebook; given=[], outputs=[])
 	body = Expr(:block)
 	# runnable lists cells in the correct order
 	# just keep only the needed ones
-	tpo = topological_order(nb)
+	tpo = PDE.topological_order(nb.topology)
 	# runnable first to keep its order
 	for cell in tpo.runnable ∩ needed_cells
 		# this returns a :toplevel expression
 		cell_expr = Pluto.parse_custom(nb, cell)
-		if !any(ex -> MacroTools.isexpr(ex, :using, :import), cell_expr.args)
+		if !any(ex -> has_usings_imports(ex), cell_expr.args)
 			# `using` and `import` are not allowed in a function.
 			# Just ignore, for now (TODO)
 			append!(body.args, cell_expr.args)
@@ -291,7 +309,9 @@ end
 # ╔═╡ Cell order:
 # ╠═3e3102e5-9bbd-4592-a749-821ee5e42c7c
 # ╠═b96bc4ca-f8bf-45a4-bd71-cd30b94d0330
+# ╠═0c9f04da-2e65-4b82-ac1e-1520391572a2
 # ╠═83dbf999-dfdf-43c8-882b-f11e17e09a3a
+# ╠═4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 # ╠═8037bbf1-fae0-47a3-a768-a089f21349a8
 # ╠═7e8a7524-1ae6-439d-98c6-5b2390014096
 # ╠═a8b197ad-765b-475e-9010-d73df9d24c13
@@ -300,6 +320,7 @@ end
 # ╠═2300d1df-94cd-4f7e-bd0b-07bad790464f
 # ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
 # ╠═c71b4e52-5d6a-4a82-b465-b755217198e6
+# ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
 # ╠═ea0ba472-50a3-4ab6-a221-0b710b361fca
 # ╠═ba256080-73fb-4de4-be72-101318c82029
 # ╠═feadac3a-859c-4915-bfc6-8fa607d6b606
