@@ -73,6 +73,9 @@ md"""
 ## Debug
 """
 
+# ╔═╡ d12b6a5b-1e35-42af-bf89-3959565464ae
+utp.unresolved_cells
+
 # ╔═╡ 198d4900-9ae1-456f-b1cf-3c26a2d8249a
 unpack_ac_cell = filter(
 	c -> contains(c.code, "@unpack a, c ="),
@@ -110,6 +113,7 @@ EEE.pretransform_pluto(unpack_ac_code.parsedcode)
 # ╠═21f86448-721a-4ffe-a098-1482071de585
 # ╠═737782bb-ea44-41b4-b467-da42793fd616
 # ╠═d3341aee-be88-4f4c-a25b-7f2342a98591
+# ╠═d12b6a5b-1e35-42af-bf89-3959565464ae
 # ╠═198d4900-9ae1-456f-b1cf-3c26a2d8249a
 # ╠═1f19f8ec-46e5-48d7-a557-15db25bc12ff
 # ╠═d011ab60-c791-43e4-babc-675be0a8b709
