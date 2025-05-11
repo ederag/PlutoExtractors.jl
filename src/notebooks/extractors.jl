@@ -44,7 +44,11 @@ with references and definitions filled.
 
 See also [`@nb_extract`](@ref)
 """
-function load_updated_topology(path::AbstractString)
+function load_updated_topology(
+	path::AbstractString;
+	get_code_str = c -> c.code,
+	get_code_expr = c -> Meta.parse(c.code),
+)
 	nb = Pluto.load_notebook_nobackup(String(path))
 
 	empty_topology = PDE.NotebookTopology{Pluto.Cell}()
@@ -54,8 +58,8 @@ function load_updated_topology(path::AbstractString)
 		empty_topology,  # old topology
 		PDE.all_cells(nb.topology),  # notebook cells
 		PDE.all_cells(nb.topology);  # cells to consider (they changed)
-		get_code_str = c -> c.code,
-		get_code_expr = c -> Meta.parse(c.code),
+		get_code_str,
+		get_code_expr,
     )
 end
 
