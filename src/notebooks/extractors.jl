@@ -18,14 +18,14 @@ import Pkg
 Pkg.activate(Base.current_project())
   ╠═╡ =#
 
-# ╔═╡ 0c9f04da-2e65-4b82-ac1e-1520391572a2
-using ExpressionExplorer
-
 # ╔═╡ 83dbf999-dfdf-43c8-882b-f11e17e09a3a
 using Pluto
 
 # ╔═╡ 8037bbf1-fae0-47a3-a768-a089f21349a8
 using MacroTools
+
+# ╔═╡ 0c9f04da-2e65-4b82-ac1e-1520391572a2
+import ExpressionExplorer as EE
 
 # ╔═╡ 4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 import PlutoDependencyExplorer as PDE
@@ -139,7 +139,7 @@ end
 
 # ╔═╡ e4ecb782-85af-4e66-a7af-72eca79bd191
 function has_usings_imports(ex)
-	(; usings, imports) = compute_usings_imports(ex)
+	(; usings, imports) = EE.compute_usings_imports(ex)
 	!isempty(usings) || !isempty(imports)
 end
 
@@ -169,6 +169,12 @@ function nb_extractor_body(utp::PDE.NotebookTopology; given=[], outputs=[])
 			push!(body.args, code_expr)
 		end
 	end
+	# type definitions should be put in the module
+	types_expr = [
+		x
+		for x in body.args
+		if MacroTools.isexpr(x, :struct, :abstract, :primitive)
+	]
 	# get rid of const (not allowed in function body)
 	body = MacroTools.postwalk(body) do x
 		MacroTools.isexpr(x, :const) ? only(x.args) : x
@@ -177,7 +183,7 @@ function nb_extractor_body(utp::PDE.NotebookTopology; given=[], outputs=[])
 	body = MacroTools.postwalk(body) do x
 		MacroTools.isexpr(x, :struct, :abstract, :primitive) ? nothing : x
 	end
-	return body
+	return types_expr, body
 end
 
 # ╔═╡ ea0ba472-50a3-4ab6-a221-0b710b361fca
@@ -302,34 +308,112 @@ macro nb_extract(utp, template)
 			"""))
 	end
 
-	# We gensym the name of the function to be evaluated so it's not easibly accessible directly, in order to make the macro also in let blocks without polluting the global scope
-	gensym_name = gensym(d[:name])
-	# We already create the expression that will be evaluated to map the gensymed function evaluated in the module to the non-gensymed name. This is also useful to trigger Pluto reactivity.
-	expr = let dict = d # Adapted from https://fluxml.ai/MacroTools.jl/dev/utilities/
+	# will put the function definition inside a module,
+	# so that the necessary packages are accessible
+	# both for the macroexpansion phase (to determine dependencies)
+	# and for the function
+	module_name = string(gensym(:PlutoExtract))
+	module_sym = Symbol(module_name)
+	
+	# Wrapper to be evaluated in the caller scope,
+	# that will call the module function
+	# Adapted from https://fluxml.ai/MacroTools.jl/dev/utilities/
+	fun_wrapper_expr = let dict = d
 		rtype = get(dict, :rtype, :Any)
-		:(function $(dict[:name])($(dict[:args]...);
-		                          $(dict[:kwargs]...))::$rtype where {$(dict[:whereparams]...)}
-		  $(__module__).$(gensym_name)($(strip_types.(dict[:args])...);
-		                          $(strip_types.(dict[:kwargs])...))
-		end)
+		:(
+			function $(dict[:name])(
+				$(dict[:args]...);
+				$(dict[:kwargs]...)
+			)::$rtype where {$(dict[:whereparams]...)}
+				$(module_sym).$(dict[:name])(
+					$(strip_types.(dict[:args])...);
+					$(strip_types.(dict[:kwargs])...)
+				)
+			end
+		)
 	end
-	# We assign the gensym_name to the function name in the dict
-	d[:name] = gensym_name
+	
 	# `nb_extractor_body` needs to know about the real notebook
 	# so the following can only be done at runtime.
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
 		let
-			extracted_block = nb_extractor_body(
-				$(esc(utp));
+			# utp is not complete yet, but enough to gather usings_imports
+			usings_imports = gather_usings_imports($(esc(utp)))
+			module_expr = get_module_expr(
+				Symbol($(module_name)),
+				$(esc(utp)),
+				usings_imports,
+			)
+			m = $__module__.eval(module_expr)
+			
+
+			# Now can use the utp of the module
+			# (more complete thanks to the macroexpansion,
+			#  that succeeds because the packages are available inside the module)
+			types_expr, extracted_block = nb_extractor_body(
+				m.utp;
 				given=$given,
 				outputs=$outputs
 			)
+			
+			# Put in the module the "types" expressions (`struct` for instance)
+			# (not allowed in the function)
+			for expr in types_expr
+				Base.eval(m, expr)
+			end
+			
+			# Insert the necessary code inside the function
 			prepend!($d[:body].args, extracted_block.args)
-			$__module__.eval(MacroTools.combinedef($d))
+			fun_expr = MacroTools.combinedef($d)
+			Base.eval(m, fun_expr)
 		end
-		$(esc(expr))
+		# Julia will evaluate this function definition when the macro is executed
+		$(esc(fun_wrapper_expr))
 	end
+end
+
+# ╔═╡ 56764600-5efa-45bd-bf9e-68dae3bde72c
+function gather_usings_imports(utp)
+	expressions = Expr[]
+	for c in utp.cell_order
+		usings_imports = EE.compute_usings_imports(Meta.parse(c.code))
+		append!(expressions, usings_imports.usings)
+		append!(expressions, usings_imports.imports)
+	end
+	expressions
+end
+
+# ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
+function get_module_expr(module_name::Symbol, topology, usings_imports) #, fun)
+	Expr(
+		:toplevel,
+		:(
+			module $(module_name)
+				using PlutoExtractors
+				$(usings_imports...)
+				utp = PlutoExtractors.update_with_macroexpand(
+					$(module_name),
+					$(topology)
+				)
+			end
+		)
+	)
+end
+
+# ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
+function update_with_macroexpand(_module, topology::PDE.NotebookTopology)
+	empty_topology = PDE.NotebookTopology{Pluto.Cell}()
+	PDE.updated_topology(
+		empty_topology,  # old topology
+		PDE.all_cells(topology),  # notebook cells
+		PDE.all_cells(topology);  # cells to consider (they changed)
+		get_code_str = c -> c.code,
+		get_code_expr = c -> macroexpand(
+			_module,
+			Meta.parse(c.code)
+		)
+    )
 end
 
 # ╔═╡ Cell order:
@@ -353,3 +437,6 @@ end
 # ╠═ba256080-73fb-4de4-be72-101318c82029
 # ╠═feadac3a-859c-4915-bfc6-8fa607d6b606
 # ╠═c2f701da-aaa7-4af5-bada-5acb05465b3f
+# ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
+# ╠═9194537f-8d42-422b-afa2-f86933522efc
+# ╠═8b28bd70-e4d9-4b21-990b-0f072e6a8802
