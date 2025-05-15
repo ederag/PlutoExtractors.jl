@@ -339,11 +339,11 @@ macro nb_extract(utp, template)
 	return quote
 		let
 			# utp is not complete yet, but enough to gather usings_imports
-			usings_imports = gather_usings_imports($(esc(utp)))
+			header = gather_header($(esc(utp)))
 			module_expr = get_module_expr(
 				Symbol($(module_name)),
 				$(esc(utp)),
-				usings_imports,
+				header,
 			)
 			m = $__module__.eval(module_expr)
 			
@@ -374,10 +374,17 @@ macro nb_extract(utp, template)
 end
 
 # ╔═╡ 56764600-5efa-45bd-bf9e-68dae3bde72c
-function gather_usings_imports(utp)
+function gather_header(utp)
 	expressions = Expr[]
-	for c in utp.cell_order
-		usings_imports = EE.compute_usings_imports(Meta.parse(c.code))
+	for cell in utp.cell_order
+		expr = Meta.parse(cell.code)
+		node = utp.nodes[cell]
+		# Pluto allows to write markdown strings
+		# without an explicit `using Markdown`.
+		if Symbol("@md_str") in node.macrocalls
+			push!(expressions, :(using Markdown))
+		end
+		usings_imports = EE.compute_usings_imports(expr)
 		append!(expressions, usings_imports.usings)
 		append!(expressions, usings_imports.imports)
 	end
