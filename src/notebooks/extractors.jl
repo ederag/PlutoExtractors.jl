@@ -8,6 +8,18 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    #! format: off
+    return quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+    #! format: on
+end
+
 # ╔═╡ 3e3102e5-9bbd-4592-a749-821ee5e42c7c
 import Pkg
 
@@ -373,6 +385,33 @@ macro nb_extract(utp, template)
 	end
 end
 
+# ╔═╡ 7fe4dc9a-9821-4924-bacb-0cebae1e74bd
+function fake_bind_expr()
+	quote
+		# Code reformatted from Pluto submodule PlutoRunner/src/bonds.jl fakebind
+		# (the one that Pluto inserts in the .jl file)
+		macro bind(def, element)
+		    return quote
+		        local iv = try
+						Base.loaded_modules[
+							Base.PkgId(
+								Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+								"AbstractPlutoDingetjes"
+							)
+						].Bonds.initial_value
+					catch
+						b -> missing
+					end
+		        local el = $(esc(element))
+		        global $(esc(def)) = Core.applicable(Base.get, el) ?
+					Base.get(el) :
+					iv(el)
+		        el
+		    end
+		end
+	end
+end
+
 # ╔═╡ 56764600-5efa-45bd-bf9e-68dae3bde72c
 function gather_header(utp)
 	expressions = Expr[]
@@ -383,6 +422,11 @@ function gather_header(utp)
 		# without an explicit `using Markdown`.
 		if Symbol("@md_str") in node.macrocalls
 			push!(expressions, :(using Markdown))
+		end
+		# Pluto handles @bind specially, without modules
+		if Symbol("@bind") in node.macrocalls
+			expr = fake_bind_expr()
+			push!(expressions, expr)
 		end
 		usings_imports = EE.compute_usings_imports(expr)
 		append!(expressions, usings_imports.usings)
@@ -446,4 +490,5 @@ end
 # ╠═c2f701da-aaa7-4af5-bada-5acb05465b3f
 # ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
 # ╠═9194537f-8d42-422b-afa2-f86933522efc
+# ╠═7fe4dc9a-9821-4924-bacb-0cebae1e74bd
 # ╠═8b28bd70-e4d9-4b21-990b-0f072e6a8802
