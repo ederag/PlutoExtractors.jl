@@ -144,6 +144,25 @@ function all_needed_cells(utp::PDE.NotebookTopology, cell;
 	cells
 end
 
+# ╔═╡ da3fb260-a858-457f-8430-c6a124d1d1e5
+function gather_bind_symbols(ex)
+	symbols = Symbol[]
+	to_visit = Expr[ex]
+	while !isempty(to_visit)
+		ex = pop!(to_visit)
+		if ex.head === :macrocall && ex.args[1] === Symbol("@bind")
+			# args[2] is the LineNumberNode
+			symbol = ex.args[3]
+			push!(symbols, symbol)
+		elseif ex isa Expr
+			for arg in ex.args
+				arg isa Expr && push!(to_visit, arg)
+			end
+		end
+	end
+	symbols
+end
+
 # ╔═╡ 63c26add-ac5a-4a2c-9779-bd6c9710fe1a
 function remove_trailing_semicolon(str)
 	rstrip(c -> c == ';' || isspace(c), str)
@@ -179,6 +198,23 @@ function nb_extractor_body(utp::PDE.NotebookTopology; given=[], outputs=[])
 			# `using` and `import` are not allowed in a function.
 			# Just ignore, for now (TODO)
 			push!(body.args, code_expr)
+		end
+		# Pluto handles @bind specially, without modules
+		# Can't just look for @bind in node.references,
+		# because @bind was macroexpanded during the creation of m.utp.
+		bind_symbols = gather_bind_symbols(code_expr)
+		for bind_symbol in bind_symbols
+			# Better error for now, because if the source notebook is opened,
+			# then one might be surprised that the default value is used,
+			# rather the current value of the slider.
+			if bind_symbol ∉ given
+				bind_name = string(bind_symbol)
+				error("""
+				Encountered a `@bind` macro.
+				The variable `$(bind_name)` can't be extracted without ambiguity.
+				Please add `$(bind_name)` to the given arguments.
+				""")
+			end
 		end
 	end
 	# type definitions should be put in the module
@@ -350,7 +386,7 @@ macro nb_extract(utp, template)
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
 		let
-			# utp is not complete yet, but enough to gather usings_imports
+			# utp is not complete yet, but enough to gather the module header
 			header = gather_header($(esc(utp)), $given)
 			module_expr = get_module_expr(
 				Symbol($(module_name)),
@@ -435,37 +471,22 @@ function gather_header(utp, given)
 	for cell in utp.cell_order
 		expr = Meta.parse(cell.code)
 		node = utp.nodes[cell]
+
 		# Pluto allows to write markdown strings
 		# without an explicit `using Markdown`.
 		if Symbol("@md_str") in node.macrocalls
 			push!(expressions, :(using Markdown))
 		end
-		# Pluto handles @bind specially, without modules
-		if Symbol("@bind") in node.macrocalls
-			# better error for now, because if the source notebook is opened,
-			# then one might be surprised that the default value is used,
-			# rather the current value of the slider.
-			definitions = node.definitions
-			length(definitions) != 1 && error(
-				"There should be a single definition in an @bind cell: $(definitions)"
-			)
-			variable_symbol = only(node.definitions)
-			if variable_symbol ∉ given
-				variable_name = string(variable_symbol)
-				error("""
-				Encountered a `@bind` macro.
-				The variable `$(variable_name)` can't be extracted without ambiguity.
-				Please add `$(variable_name)` to the function arguments.
-				""")
-			end
-			# Needed for update_with_macroexpand to succeed
-			expr = fake_bind_expr()
-			push!(expressions, expr)
-		end
+
+		# Need all usings and imports
+		# to create the full m.utp (with macroexpansion).
 		usings_imports = EE.compute_usings_imports(expr)
 		append!(expressions, usings_imports.usings)
 		append!(expressions, usings_imports.imports)
 	end
+	# Needed for update_with_macroexpand to succeed, if any @bind
+	expr = fake_bind_expr()
+	push!(expressions, expr)
 	expressions
 end
 
@@ -498,6 +519,7 @@ end
 # ╠═9fb50a81-390d-44bc-8819-e9ed97d1e0de
 # ╠═2300d1df-94cd-4f7e-bd0b-07bad790464f
 # ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
+# ╠═da3fb260-a858-457f-8430-c6a124d1d1e5
 # ╠═c71b4e52-5d6a-4a82-b465-b755217198e6
 # ╠═63c26add-ac5a-4a2c-9779-bd6c9710fe1a
 # ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
