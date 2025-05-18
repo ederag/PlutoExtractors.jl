@@ -56,19 +56,27 @@ Pluto treats @bind special
 utp = load_updated_topology(source_nb_file)
 
 # ╔═╡ a8ac792a-d83b-48ea-a98b-79c43ef76c2e
-@nb_extract(
+PlutoTest.@test_throws ["Please add `a` to the function arguments"] @nb_extract(
 	utp,
 	function fun1()
 		return b
 	end
 )
 
+# ╔═╡ c23487ba-d2e9-4665-b57f-d661b2d16a25
+@nb_extract(
+	utp,
+	function fun2(a)
+		return b
+	end
+)
+
 # ╔═╡ b2b5d93a-faff-4d9f-92da-40bf95efcff6
-fun1_b = fun1()
+fun2_b = fun2(4)
 
 # ╔═╡ 84f703bd-39d4-43a0-8062-34decd68c6bc
-# Default value for a is 3, and b = 2a
-PlutoTest.@test fun1_b == 6
+# The given `a` is 4, and `b = 2a`
+PlutoTest.@test fun2_b == 8
 
 # ╔═╡ Cell order:
 # ╠═64f6372a-eff1-11ec-2395-31d68eda5f3a
@@ -81,5 +89,6 @@ PlutoTest.@test fun1_b == 6
 # ╠═214a48ea-1769-45c8-b113-bb17a1a766b7
 # ╠═b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
 # ╠═a8ac792a-d83b-48ea-a98b-79c43ef76c2e
+# ╠═c23487ba-d2e9-4665-b57f-d661b2d16a25
 # ╠═b2b5d93a-faff-4d9f-92da-40bf95efcff6
 # ╠═84f703bd-39d4-43a0-8062-34decd68c6bc

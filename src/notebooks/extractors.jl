@@ -351,7 +351,7 @@ macro nb_extract(utp, template)
 	return quote
 		let
 			# utp is not complete yet, but enough to gather usings_imports
-			header = gather_header($(esc(utp)))
+			header = gather_header($(esc(utp)), $given)
 			module_expr = get_module_expr(
 				Symbol($(module_name)),
 				$(esc(utp)),
@@ -385,6 +385,23 @@ macro nb_extract(utp, template)
 	end
 end
 
+# ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
+function get_module_expr(module_name::Symbol, topology, usings_imports)
+	Expr(
+		:toplevel,
+		:(
+			module $(module_name)
+				using PlutoExtractors
+				$(usings_imports...)
+				utp = PlutoExtractors.update_with_macroexpand(
+					$(module_name),
+					$(topology)
+				)
+			end
+		)
+	)
+end
+
 # ╔═╡ 7fe4dc9a-9821-4924-bacb-0cebae1e74bd
 function fake_bind_expr()
 	quote
@@ -413,7 +430,7 @@ function fake_bind_expr()
 end
 
 # ╔═╡ 56764600-5efa-45bd-bf9e-68dae3bde72c
-function gather_header(utp)
+function gather_header(utp, given)
 	expressions = Expr[]
 	for cell in utp.cell_order
 		expr = Meta.parse(cell.code)
@@ -425,6 +442,23 @@ function gather_header(utp)
 		end
 		# Pluto handles @bind specially, without modules
 		if Symbol("@bind") in node.macrocalls
+			# better error for now, because if the source notebook is opened,
+			# then one might be surprised that the default value is used,
+			# rather the current value of the slider.
+			definitions = node.definitions
+			length(definitions) != 1 && error(
+				"There should be a single definition in an @bind cell: $(definitions)"
+			)
+			variable_symbol = only(node.definitions)
+			if variable_symbol ∉ given
+				variable_name = string(variable_symbol)
+				error("""
+				Encountered a `@bind` macro.
+				The variable `$(variable_name)` can't be extracted without ambiguity.
+				Please add `$(variable_name)` to the function arguments.
+				""")
+			end
+			# Needed for update_with_macroexpand to succeed
 			expr = fake_bind_expr()
 			push!(expressions, expr)
 		end
@@ -433,23 +467,6 @@ function gather_header(utp)
 		append!(expressions, usings_imports.imports)
 	end
 	expressions
-end
-
-# ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
-function get_module_expr(module_name::Symbol, topology, usings_imports) #, fun)
-	Expr(
-		:toplevel,
-		:(
-			module $(module_name)
-				using PlutoExtractors
-				$(usings_imports...)
-				utp = PlutoExtractors.update_with_macroexpand(
-					$(module_name),
-					$(topology)
-				)
-			end
-		)
-	)
 end
 
 # ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
