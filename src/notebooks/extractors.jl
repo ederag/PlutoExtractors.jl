@@ -360,8 +360,7 @@ macro nb_extract(utp, template)
 	# so that the necessary packages are accessible
 	# both for the macroexpansion phase (to determine dependencies)
 	# and for the function
-	module_name = string(gensym(:PlutoExtract))
-	module_sym = Symbol(module_name)
+	module_sym = gensym(:PlutoExtract)
 	
 	# Wrapper to be evaluated in the caller scope,
 	# that will call the module function
@@ -389,7 +388,7 @@ macro nb_extract(utp, template)
 			# utp is not complete yet, but enough to gather the module header
 			header = gather_header($(esc(utp)), $given)
 			module_expr = get_module_expr(
-				Symbol($(module_name)),
+				$(QuoteNode(module_sym)),
 				$(esc(utp)),
 				header,
 			)
