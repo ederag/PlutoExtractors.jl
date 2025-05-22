@@ -75,46 +75,6 @@ function load_updated_topology(
     )
 end
 
-# ╔═╡ a8b197ad-765b-475e-9010-d73df9d24c13
-function find_definition_cells(nb::Pluto.Notebook, symbols)
-	filter(
-		cell -> any(in(nb.topology.nodes[cell].definitions), symbols),
-		nb.cells
-	)
-end
-
-# ╔═╡ 447318b6-e302-4f16-b149-52108b4283fe
-find_function_cells(nb::Pluto.Notebook, symbols) = filter(
-	cell -> any(
-		symbol -> (
-			symbol in nb.topology.nodes[cell].funcdefs_with_signatures
-			|| symbol in nb.topology.nodes[cell].funcdefs_without_signatures
-		),
-		symbols
-	),
-	nb.cells
-)
-
-# ╔═╡ 9fb50a81-390d-44bc-8819-e9ed97d1e0de
-function symbols_defined(utp::PDE.NotebookTopology, cell)
-	node = utp.nodes[cell]
-	union(
-		node.definitions,
-		node.funcdefs_with_signatures,
-		node.funcdefs_without_signatures,
-	)
-end
-
-# ╔═╡ 2300d1df-94cd-4f7e-bd0b-07bad790464f
-find_symbols_cells(utp::PDE.NotebookTopology, symbols) = filter(
-	# TODO: this can surely be simplified now
-	cell -> any(
-		symbol -> symbol in symbols_defined(utp, cell),
-		symbols
-	),
-	PDE.all_cells(utp)
-)
-
 # ╔═╡ 68af943e-a9ed-44e0-85a7-452fc62411ea
 # non-recursive version,
 # finds exactly the cells defining the symbols that are not in given_symbols
@@ -488,10 +448,6 @@ end
 # ╠═8037bbf1-fae0-47a3-a768-a089f21349a8
 # ╠═c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
 # ╠═7e8a7524-1ae6-439d-98c6-5b2390014096
-# ╠═a8b197ad-765b-475e-9010-d73df9d24c13
-# ╠═447318b6-e302-4f16-b149-52108b4283fe
-# ╠═9fb50a81-390d-44bc-8819-e9ed97d1e0de
-# ╠═2300d1df-94cd-4f7e-bd0b-07bad790464f
 # ╠═68af943e-a9ed-44e0-85a7-452fc62411ea
 # ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
 # ╠═da3fb260-a858-457f-8430-c6a124d1d1e5
