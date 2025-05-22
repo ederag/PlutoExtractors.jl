@@ -77,6 +77,26 @@ fun_1()
 # ╔═╡ 9cf1c8ea-6043-41cd-abdd-595ebf5254b2
 PlutoTest.@test fun_1() == 2
 
+# ╔═╡ 6f6178c8-9c47-4ccb-a8a6-bfb6ac79d30f
+md"""
+### Sub/supertypes
+
+Sensitive to [Julia#50354](https://github.com/JuliaLang/julia/issues/50354) ?
+"""
+
+# ╔═╡ 919bd4ba-6fe2-4641-b7b7-1c184f97679d
+#  Can't get the module yet, so test inside the function
+@nb_extract(
+	utp,
+	function fun_2()
+		sup_match = supertype(Point) === AbstractPoint
+		return sup_match
+	end
+)
+
+# ╔═╡ 175535b1-9599-45e5-a428-8282f99ee50d
+PlutoTest.@test fun_2() === true
+
 # ╔═╡ Cell order:
 # ╠═51df9d39-7d35-49e1-bac3-7354882bb141
 # ╠═67aa154f-a294-41ce-aea5-36cf5ddcf1de
@@ -94,3 +114,6 @@ PlutoTest.@test fun_1() == 2
 # ╠═525f5fcc-efd1-48ef-8aeb-9c184e54a50d
 # ╠═b8879c23-6aec-435a-a875-e30ebd1b4d5a
 # ╠═9cf1c8ea-6043-41cd-abdd-595ebf5254b2
+# ╠═6f6178c8-9c47-4ccb-a8a6-bfb6ac79d30f
+# ╠═919bd4ba-6fe2-4641-b7b7-1c184f97679d
+# ╠═175535b1-9599-45e5-a428-8282f99ee50d
