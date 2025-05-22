@@ -75,6 +75,56 @@ function load_updated_topology(
     )
 end
 
+# ╔═╡ b129127a-d2dc-490c-8f38-b0f210d3070c
+function template_analysis(template::Expr)
+	dict = MacroTools.splitdef(template)
+
+	# symbols that will be given by the caller
+	given_symbols = Symbol[]
+	for arg in Iterators.flatten((dict[:args], dict[:kwargs]))
+		name, _ = MacroTools.splitarg(arg)
+		push!(given_symbols, name)
+	end
+
+	template_body = dict[:body]
+	node = EE.compute_reactive_node(template_body)
+	needed_symbols = filter(∉(given_symbols), node.references)
+	dict, given_symbols, needed_symbols
+end
+
+# ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
+function get_module_expr(module_name::Symbol, topology, usings_imports)
+	Expr(
+		:toplevel,
+		:(
+			module $(module_name)
+				using PlutoExtractors
+				$(usings_imports...)
+				utp = PlutoExtractors.update_with_macroexpand(
+					$(module_name),
+					$(topology)
+				)
+			end
+		)
+	)
+end
+
+# ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
+function update_with_macroexpand(_module, topology::PDE.NotebookTopology)
+	cell_type = eltype(topology.cell_order)
+	empty_topology = PDE.NotebookTopology{cell_type}()
+	PDE.updated_topology(
+		empty_topology,  # old topology
+		PDE.all_cells(topology),  # notebook cells
+		PDE.all_cells(topology);  # cells to consider (they changed)
+		get_code_str = c -> c.code,
+		get_code_expr = c -> macroexpand(
+			_module,
+			Meta.parse(c.code)
+		)
+    )
+end
+
 # ╔═╡ 68af943e-a9ed-44e0-85a7-452fc62411ea
 # non-recursive version,
 # finds exactly the cells defining the symbols that are not in given_symbols
@@ -137,23 +187,6 @@ function strip_types(x::Expr)::Symbol
 	end
 end
 
-# ╔═╡ b129127a-d2dc-490c-8f38-b0f210d3070c
-function template_analysis(template::Expr)
-	dict = MacroTools.splitdef(template)
-	
-	# symbols that will be given by the caller
-	given_symbols = Symbol[]
-	for arg in Iterators.flatten((dict[:args], dict[:kwargs]))
-		name, _ = MacroTools.splitarg(arg)
-		push!(given_symbols, name)
-	end
-	
-	template_body = dict[:body]
-	node = EE.compute_reactive_node(template_body)
-	needed_symbols = filter(∉(given_symbols), node.references)
-	dict, given_symbols, needed_symbols
-end
-
 # ╔═╡ 5c15516e-e3e1-401b-97b5-f4ce60e3a234
 function fun_wrapper(template_dict, module_sym::Symbol)
 	# Wrapper to be evaluated in the caller scope,
@@ -168,6 +201,115 @@ function fun_wrapper(template_dict, module_sym::Symbol)
 	)
 	MacroTools.combinedef(wrapper_dict)
 end
+
+# ╔═╡ c2f701da-aaa7-4af5-bada-5acb05465b3f
+"""
+    @nb_extract(utp, template)
+
+Create a function out of a `Pluto` notebook updated topology,
+based on a template.
+
+The notebook updated topology `utp` must be a `PlutoDependencyExplorer.NotebookTopology{Pluto.Cell}`,
+with up-to-date topology, filled with references and definitions
+(for instance from [`load_updated_topology`](@ref)).
+
+The signature of the returned function is exactly the one of the `template`.
+The argument names must match symbols defined in the notebook.
+The arguments values will be used instead of the source notebook ones
+in the evaluation.
+
+The return value of this function is found in the `template` body.
+This body must consist of a single `return` statement.
+The return value can be a single variable (e.g. ` return c`),
+a tuple (e.g. `return (b, c)`), or a named tuple (e.g. `return (; b = b, whatever = c)`).
+
+The updated topology `utp` is then analyzed to find the cells that are necessary
+to evaluate the return value
+(the cells that define `a` and `b` in the last examples).
+
+Those cells code is used as the core of the function body.
+
+The result of the macro is this fleshed-out function,
+just as if it had been typed by hand.
+Preliminary benchmarks show no overhead.
+
+Remark: `@nb_extract` can be used not only from a running Pluto notebook,
+but from anywhere else (a script, the REPL, ...).
+
+# Examples
+Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
+here is how to make a function that return the value `c` from any given `a`:
+```jldoctest
+julia> using PlutoExtractors: load_updated_topology, @nb_extract
+julia> source_path = pkgdir(PlutoExtractors,
+	"test", "notebooks", "source_basic.jl"
+)  # to be replaced with the path of your source notebook
+julia> utp = load_updated_topology(source_path);
+julia> @nb_extract(
+	utp,
+	function fun(a)
+		return c
+	end
+)
+julia> fun(2)
+8
+```
+
+See also [`load_nb_with_topology`](@ref)
+"""
+macro nb_extract(utp, template)
+	# will put the function definition inside a module,
+	# so that the necessary packages are accessible
+	# both for the macroexpansion phase (to determine dependencies)
+	# and for the function
+	module_sym = gensym(:PlutoExtract)
+
+	(template_dict, given_symbols, needed_symbols) = template_analysis(template)
+
+	# The wrapper expression has to be build beforehand,
+	# to be put at the end of the quote,
+	# to be evaluated in the local scope rather than in toplevel
+	fun_wrapper_expr = fun_wrapper(
+		template_dict,
+		module_sym
+	)
+
+	# `nb_extractor_body` needs to know about the real notebook
+	# so the following can only be done at runtime.
+	# => Just prepare the expressions to be evaluated when the macro is executed.
+	return quote
+		let
+			# utp is not complete yet, but enough to gather the module header
+			header = gather_header($(esc(utp)), $(QuoteNode(given_symbols)))
+			module_expr = get_module_expr(
+				$(QuoteNode(module_sym)),
+				$(esc(utp)),
+				header,
+			)
+			m = $__module__.eval(module_expr)
+
+			# Now can use the utp of the module
+			# (more complete thanks to the macroexpansion,
+			#  that succeeds because the packages are available inside the module)
+			types_expr, fun_expr = nb_extractor_body(
+				m.utp,
+				$(QuoteNode(template_dict)),
+				$(QuoteNode(given_symbols))
+			)
+
+			# Put in the module the "types" expressions (`struct` for instance)
+			# (not allowed in the function)
+			for expr in types_expr
+				Base.eval(m, expr)
+			end
+
+			Base.eval(m, fun_expr)
+		end
+		# This last expression will be evaluated in the caller's scope
+		$(esc(fun_wrapper_expr))
+	end
+end
+
 
 # ╔═╡ 63c26add-ac5a-4a2c-9779-bd6c9710fe1a
 function remove_trailing_semicolon(str)
@@ -243,135 +385,6 @@ function nb_extractor_body(utp, template_dict::Dict, given_symbols)
 	return types_expr, fun_expr
 end
 
-# ╔═╡ c2f701da-aaa7-4af5-bada-5acb05465b3f
-"""
-    @nb_extract(utp, template)
-
-Create a function out of a `Pluto` notebook updated topology,
-based on a template.
-
-The notebook updated topology `utp` must be a `PlutoDependencyExplorer.NotebookTopology{Pluto.Cell}`,
-with up-to-date topology, filled with references and definitions
-(for instance from [`load_updated_topology`](@ref)).
-
-The signature of the returned function is exactly the one of the `template`.
-The argument names must match symbols defined in the notebook.
-The arguments values will be used instead of the source notebook ones
-in the evaluation.
-
-The return value of this function is found in the `template` body.
-This body must consist of a single `return` statement.
-The return value can be a single variable (e.g. ` return c`),
-a tuple (e.g. `return (b, c)`), or a named tuple (e.g. `return (; b = b, whatever = c)`).
-
-The updated topology `utp` is then analyzed to find the cells that are necessary
-to evaluate the return value
-(the cells that define `a` and `b` in the last examples).
-
-Those cells code is used as the core of the function body.
-
-The result of the macro is this fleshed-out function,
-just as if it had been typed by hand.
-Preliminary benchmarks show no overhead.
-
-Remark: `@nb_extract` can be used not only from a running Pluto notebook,
-but from anywhere else (a script, the REPL, ...).
-
-# Examples
-Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
-here is how to make a function that return the value `c` from any given `a`:
-```jldoctest
-julia> using PlutoExtractors: load_updated_topology, @nb_extract
-julia> source_path = pkgdir(PlutoExtractors,
-	"test", "notebooks", "source_basic.jl"
-)  # to be replaced with the path of your source notebook
-julia> utp = load_updated_topology(source_path);
-julia> @nb_extract(
-	utp,
-	function fun(a)
-		return c
-	end
-)
-julia> fun(2)
-8
-```
-
-See also [`load_nb_with_topology`](@ref)
-"""
-macro nb_extract(utp, template)
-	# will put the function definition inside a module,
-	# so that the necessary packages are accessible
-	# both for the macroexpansion phase (to determine dependencies)
-	# and for the function
-	module_sym = gensym(:PlutoExtract)
-
-	(template_dict, given_symbols, needed_symbols) = template_analysis(template)
-
-	# The wrapper expression has to be build beforehand,
-	# to be put at the end of the quote,
-	# to be evaluated in the local scope rather than in toplevel
-	fun_wrapper_expr = fun_wrapper(
-		template_dict,
-		module_sym
-	)
-	
-	# `nb_extractor_body` needs to know about the real notebook
-	# so the following can only be done at runtime.
-	# => Just prepare the expressions to be evaluated when the macro is executed.
-	return quote
-		let
-			
-			
-			
-			# utp is not complete yet, but enough to gather the module header
-			header = gather_header($(esc(utp)), $(QuoteNode(given_symbols)))
-			module_expr = get_module_expr(
-				$(QuoteNode(module_sym)),
-				$(esc(utp)),
-				header,
-			)
-			m = $__module__.eval(module_expr)
-			
-
-			# Now can use the utp of the module
-			# (more complete thanks to the macroexpansion,
-			#  that succeeds because the packages are available inside the module)
-			types_expr, fun_expr = nb_extractor_body(
-				m.utp,
-				$(QuoteNode(template_dict)),
-				$(QuoteNode(given_symbols))
-			)
-			
-			# Put in the module the "types" expressions (`struct` for instance)
-			# (not allowed in the function)
-			for expr in types_expr
-				Base.eval(m, expr)
-			end
-			
-			Base.eval(m, fun_expr)
-		end
-		# This last expression will be evaluated in the caller's scope
-		$(esc(fun_wrapper_expr))
-	end
-end
-
-# ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
-function get_module_expr(module_name::Symbol, topology, usings_imports)
-	Expr(
-		:toplevel,
-		:(
-			module $(module_name)
-				using PlutoExtractors
-				$(usings_imports...)
-				utp = PlutoExtractors.update_with_macroexpand(
-					$(module_name),
-					$(topology)
-				)
-			end
-		)
-	)
-end
-
 # ╔═╡ 7fe4dc9a-9821-4924-bacb-0cebae1e74bd
 function fake_bind_expr()
 	quote
@@ -424,22 +437,6 @@ function gather_header(utp, given)
 	expressions
 end
 
-# ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
-function update_with_macroexpand(_module, topology::PDE.NotebookTopology)
-	cell_type = eltype(topology.cell_order)
-	empty_topology = PDE.NotebookTopology{cell_type}()
-	PDE.updated_topology(
-		empty_topology,  # old topology
-		PDE.all_cells(topology),  # notebook cells
-		PDE.all_cells(topology);  # cells to consider (they changed)
-		get_code_str = c -> c.code,
-		get_code_expr = c -> macroexpand(
-			_module,
-			Meta.parse(c.code)
-		)
-    )
-end
-
 # ╔═╡ Cell order:
 # ╠═3e3102e5-9bbd-4592-a749-821ee5e42c7c
 # ╠═b96bc4ca-f8bf-45a4-bd71-cd30b94d0330
@@ -449,18 +446,18 @@ end
 # ╠═8037bbf1-fae0-47a3-a768-a089f21349a8
 # ╠═c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
 # ╠═7e8a7524-1ae6-439d-98c6-5b2390014096
-# ╠═68af943e-a9ed-44e0-85a7-452fc62411ea
-# ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
-# ╠═da3fb260-a858-457f-8430-c6a124d1d1e5
-# ╠═ba256080-73fb-4de4-be72-101318c82029
-# ╠═feadac3a-859c-4915-bfc6-8fa607d6b606
+# ╠═c2f701da-aaa7-4af5-bada-5acb05465b3f
 # ╠═b129127a-d2dc-490c-8f38-b0f210d3070c
 # ╠═5c15516e-e3e1-401b-97b5-f4ce60e3a234
+# ╠═ba256080-73fb-4de4-be72-101318c82029
+# ╠═feadac3a-859c-4915-bfc6-8fa607d6b606
+# ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
+# ╠═7fe4dc9a-9821-4924-bacb-0cebae1e74bd
+# ╠═9194537f-8d42-422b-afa2-f86933522efc
+# ╠═8b28bd70-e4d9-4b21-990b-0f072e6a8802
+# ╠═58780697-0b89-420c-8b22-a31705ce45e4
+# ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
+# ╠═68af943e-a9ed-44e0-85a7-452fc62411ea
 # ╠═63c26add-ac5a-4a2c-9779-bd6c9710fe1a
 # ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
-# ╠═58780697-0b89-420c-8b22-a31705ce45e4
-# ╠═c2f701da-aaa7-4af5-bada-5acb05465b3f
-# ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
-# ╠═9194537f-8d42-422b-afa2-f86933522efc
-# ╠═7fe4dc9a-9821-4924-bacb-0cebae1e74bd
-# ╠═8b28bd70-e4d9-4b21-990b-0f072e6a8802
+# ╠═da3fb260-a858-457f-8430-c6a124d1d1e5
