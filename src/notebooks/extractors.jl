@@ -426,7 +426,8 @@ end
 
 # ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
 function update_with_macroexpand(_module, topology::PDE.NotebookTopology)
-	empty_topology = PDE.NotebookTopology{Pluto.Cell}()
+	cell_type = eltype(topology.cell_order)
+	empty_topology = PDE.NotebookTopology{cell_type}()
 	PDE.updated_topology(
 		empty_topology,  # old topology
 		PDE.all_cells(topology),  # notebook cells
