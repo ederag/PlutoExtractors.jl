@@ -157,14 +157,15 @@ md"""
 """
 
 # ╔═╡ 4366181c-9516-436e-8072-31488d4722ab
-PlutoTest.@test_throws ErrorException(
-	"Unable to extract any definition for Any[:non_existing]"
-) @nb_extract(
+@nb_extract(
 	utp,
 	function fun_error_1()
 		return non_existing  # :non_existing is not defined in nb
 	end
 )
+
+# ╔═╡ 45d63dc5-6913-4738-a16f-db3003be6007
+PlutoTest.@test_throws UndefVarError(:non_existing) fun_error_1()
 
 # ╔═╡ Cell order:
 # ╠═64f6372a-eff1-11ec-2395-31d68eda5f3a
@@ -201,3 +202,4 @@ PlutoTest.@test_throws ErrorException(
 # ╠═f4410aeb-b742-4732-9789-640ec466637a
 # ╠═62989d10-0da0-41ca-8d70-f6d2d2bb5435
 # ╠═4366181c-9516-436e-8072-31488d4722ab
+# ╠═45d63dc5-6913-4738-a16f-db3003be6007
