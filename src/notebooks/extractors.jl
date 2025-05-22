@@ -344,25 +344,27 @@ macro nb_extract(utp, template)
 	# both for the macroexpansion phase (to determine dependencies)
 	# and for the function
 	module_sym = gensym(:PlutoExtract)
+
+	(template_dict, given_symbols, needed_symbols) = template_analysis(template)
+
+	# The wrapper expression has to be build beforehand,
+	# to be put at the end of the quote,
+	# to be evaluated in the local scope rather than in toplevel
+	fun_wrapper_expr = fun_wrapper(
+		template_dict,
+		module_sym
+	)
 	
 	# `nb_extractor_body` needs to know about the real notebook
 	# so the following can only be done at runtime.
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
 		let
-			(
-				template_dict,
-				given_symbols,
-				needed_symbols
-			) = template_analysis($(QuoteNode(template)))
 			
-			fun_wrapper_expr = fun_wrapper(
-				template_dict,
-				$(QuoteNode(module_sym))
-			)
+			
 			
 			# utp is not complete yet, but enough to gather the module header
-			header = gather_header($(esc(utp)), given_symbols)
+			header = gather_header($(esc(utp)), $(QuoteNode(given_symbols)))
 			module_expr = get_module_expr(
 				$(QuoteNode(module_sym)),
 				$(esc(utp)),
@@ -376,8 +378,8 @@ macro nb_extract(utp, template)
 			#  that succeeds because the packages are available inside the module)
 			types_expr, fun_expr = nb_extractor_body(
 				m.utp,
-				template_dict,
-				given_symbols
+				$(QuoteNode(template_dict)),
+				$(QuoteNode(given_symbols))
 			)
 			
 			# Put in the module the "types" expressions (`struct` for instance)
@@ -387,9 +389,9 @@ macro nb_extract(utp, template)
 			end
 			
 			Base.eval(m, fun_expr)
-			# Evaluate the wrapper in the caller's toplevel
-			Base.eval($(esc(__module__)), fun_wrapper_expr)
 		end
+		# This last expression will be evaluated in the caller's scope
+		$(esc(fun_wrapper_expr))
 	end
 end
 
