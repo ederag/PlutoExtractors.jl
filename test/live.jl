@@ -1,15 +1,15 @@
 # to be included by ./runtests.jl
 # where server_session is defined
 
-@testset "Try" begin
+@testset "Basic" begin
 	source_basic_path = pkgdir(PlutoExtractors, "test", "notebooks", "source_basic.jl")
 
 	# "# expected" cells produce an output that the next cell should reproduce
 	dest_notebook = Pluto.Notebook([
 		Pluto.Cell("""using PlutoExtractors"""),
-		Pluto.Cell("""nb = load_nb_with_topology("$(source_basic_path)")"""),
+		Pluto.Cell("""utp = load_updated_topology("$(source_basic_path)")"""),
 		Pluto.Cell("""
-			@nb_extract(nb, 
+			@nb_extract(utp, 
 				function fun(a)
 					return c
 				end

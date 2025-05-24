@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -37,11 +37,11 @@ md"""
 md"## Just one variable"
 
 # ╔═╡ a946286a-cef8-49e3-a98c-f87721f3d80d
-nb = load_nb_with_topology(source_nb_file)
+utp = load_updated_topology(source_nb_file)
 
 # ╔═╡ f064422c-b72a-4450-844f-4cb7172bd753
 @nb_extract(
-	nb,
+	utp,
 	function fun_out_a()
 		return a
 	end
