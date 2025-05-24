@@ -132,18 +132,19 @@ end
 Create a function out of a `Pluto` notebook updated topology,
 based on a template.
 
-The notebook updated topology `utp` must be a `PlutoDependencyExplorer.NotebookTopology{Pluto.Cell}`,
-with up-to-date topology, filled with references and definitions
-(for instance from [`load_updated_topology`](@ref)).
+The notebook updated topology `utp` is obtained
+from [`load_updated_topology`](@ref).
+This is a shallow first pass that will help determine the required packages.
 
 The signature of the returned function is exactly the one of the `template`.
 The arguments take precedence over the values defined in the notebook.
 
-The updated topology `utp` and the template are then analyzed
+A second pass performed on `utp` and the template are then analyzed
 to find the cells that are necessary to evaluate the template body
-(the cells that define `b` and `c` in the last example).
+(the cells that define `b` and `c` in the example below).
 
-Those cells code is prepended to the template body, to form the function body.
+Those cells code is prepended to the template body,
+to complete the function body.
 
 The result of the macro is this fleshed-out function,
 just as if it had been typed by hand.
@@ -152,7 +153,7 @@ Preliminary benchmarks show no overhead.
 Remark: `@nb_extract` can be used not only from a running Pluto notebook,
 but from anywhere else (a script, the REPL, ...).
 
-# Examples
+# Example
 Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
 here is how to make a function that return the value `c` from any given `a`:
 ```jldoctest
