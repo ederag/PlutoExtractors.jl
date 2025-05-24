@@ -23,10 +23,6 @@ server_session.connected_clients[fakeclient.id] = fakeclient
 
 
 @testset "PlutoExtractors.jl" begin
-	@testset "try" begin
-	    include("try.jl")
-	end
-
 	@testset "Helpers" begin
 		include("notebooks/helpers.jl")
 	end
@@ -57,5 +53,9 @@ server_session.connected_clients[fakeclient.id] = fakeclient
 	
 	@testset "Extract from source_bind.jl" begin
 		include("notebooks/extract_from_source_bind.jl")
+	end
+
+	@testset "Live" begin
+	    include("live.jl")
 	end
 end

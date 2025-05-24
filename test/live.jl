@@ -1,7 +1,7 @@
 # to be included by ./runtests.jl
 # where server_session is defined
 
-@testset "Try" begin
+@testset "Basic" begin
 	source_basic_path = pkgdir(PlutoExtractors, "test", "notebooks", "source_basic.jl")
 
 	# "# expected" cells produce an output that the next cell should reproduce
