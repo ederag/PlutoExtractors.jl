@@ -434,6 +434,16 @@ function nb_extractor_body(utp, template_dict::Dict, given_symbols)
 	return types_expr, fun_expr
 end
 
+# ╔═╡ 20548484-991e-4b15-b6c5-8ea6b0bf69cb
+"""
+    rm_all_lines(ex)
+
+Return the expression ex expurged from all LineNumberNodes.
+
+Current limitation: does not propagate into `quote` ?
+"""
+rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
+
 # ╔═╡ Cell order:
 # ╠═3e3102e5-9bbd-4592-a749-821ee5e42c7c
 # ╠═b96bc4ca-f8bf-45a4-bd71-cd30b94d0330
@@ -458,3 +468,4 @@ end
 # ╠═63c26add-ac5a-4a2c-9779-bd6c9710fe1a
 # ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
 # ╠═da3fb260-a858-457f-8430-c6a124d1d1e5
+# ╠═20548484-991e-4b15-b6c5-8ea6b0bf69cb
