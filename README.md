@@ -54,9 +54,14 @@ More examples can be found in the test/notebooks/extract_from_*.jl Pluto noteboo
 
 ## Status
 
-This is early alpha stage, for the adventurous, and for early feedback.
-Work is under way to make it more robust.
+This package is in alpha stage.
+It works well here, but no doubt bugs will come up when used by others,
+please file issues !
 
-Note: the heavy work is done by
-[MacroTools.jl](https://github.com/FluxML/MacroTools.jl)
-and [Pluto.jl](https://github.com/fonsp/Pluto.jl) internals.
+## Acknowledgments
+
+Most of the work is done by
+[Pluto.jl](https://github.com/fonsp/Pluto.jl) for the notebook loading,
+as well as [ExpressionExplorer.jl](https://github.com/JuliaPluto/ExpressionExplorer.jl),
+[PlutoDependencyExplorer.jl](https://github.com/JuliaPluto/PlutoDependencyExplorer.jl)
+and [MacroTools.jl](https://github.com/FluxML/MacroTools.jl) for the analysis.
