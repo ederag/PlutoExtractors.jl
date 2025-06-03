@@ -211,7 +211,8 @@ macro nb_extract(utp, template)
 			types_expr, fun_expr = nb_extractor_body(
 				m.utp,
 				$(QuoteNode(template_dict)),
-				$(QuoteNode(given_symbols))
+				$(QuoteNode(given_symbols)),
+				$(QuoteNode(needed_symbols))
 			)
 
 			# Put in the module the "types" expressions (`struct` for instance)
@@ -297,9 +298,12 @@ function get_module_expr(module_name::Symbol, topology, usings_imports)
 	)
 end
 
+# ╔═╡ db0b5056-849c-40a1-b2f7-b9d89ba3ea75
+get_cell_type(topology) = eltype(topology.cell_order)
+
 # ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
 function update_with_macroexpand(_module, topology::PDE.NotebookTopology)
-	cell_type = eltype(topology.cell_order)
+	cell_type = get_cell_type(topology)
 	empty_topology = PDE.NotebookTopology{cell_type}()
 	PDE.updated_topology(
 		empty_topology,  # old topology
@@ -339,18 +343,14 @@ function all_needed_cells(
 			cell ∉ needed && push!(to_visit, cell)
 		end
 	end
-	needed
+	tpo = PDE.topological_order(utp)
+	# runnable first to keep its order
+	tpo.runnable ∩ needed
 end
 
 # ╔═╡ 63c26add-ac5a-4a2c-9779-bd6c9710fe1a
 function remove_trailing_semicolon(str)
 	rstrip(c -> c == ';' || isspace(c), str)
-end
-
-# ╔═╡ e4ecb782-85af-4e66-a7af-72eca79bd191
-function has_usings_imports(ex)
-	(; usings, imports) = EE.compute_usings_imports(ex)
-	!isempty(usings) || !isempty(imports)
 end
 
 # ╔═╡ da3fb260-a858-457f-8430-c6a124d1d1e5
@@ -372,13 +372,106 @@ function gather_bind_symbols(ex)
 	symbols
 end
 
+# ╔═╡ f4b031d7-8039-4b5b-9eca-89a2338c6b94
+function check_safe_bind(code_expr, given_symbols)
+	# Pluto handles @bind specially, without modules
+	# Can't just look for @bind in node.references,
+	# because @bind was macroexpanded during the creation of m.utp.
+	bind_symbols = gather_bind_symbols(code_expr)
+	for bind_symbol in bind_symbols
+		# Better error for now, because if the source notebook is opened,
+		# then one might be surprised that the default value is used,
+		# in stead of the current value of the slider.
+		if bind_symbol ∉ given_symbols
+			bind_name = string(bind_symbol)
+			error("""
+			Encountered a `@bind` macro.
+			The variable `$(bind_name)` can't be extracted without ambiguity.
+			Please add `$(bind_name)` to the given arguments.
+			""")
+		end
+	end
+end
+
+# ╔═╡ e4ecb782-85af-4e66-a7af-72eca79bd191
+function has_usings_imports(ex)
+	(; usings, imports) = EE.compute_usings_imports(ex)
+	!isempty(usings) || !isempty(imports)
+end
+
+# ╔═╡ d2c81f1c-2756-4877-809f-5cc7b827ce9d
+function defines_type(ex::Expr)
+	if MacroTools.isexpr(ex, :struct, :abstract, :primitive)
+		return true
+	else
+		return any(defines_type, ex.args)
+	end
+end
+
+# ╔═╡ aaa4c1e6-bf01-4843-a168-1bd8b252f749
+# fallback (for e.g. Symbol, LineNumberNode)
+defines_type(x) = false
+
+# ╔═╡ 89abc58d-366a-484e-a723-f20a364574d4
+function split_destinations(
+	utp::PDE.NotebookTopology,
+	given_symbols,
+	needed_symbols
+)
+	cell_type = get_cell_type(utp)
+	destinations = Dict{cell_type, Symbol}()
+	needed_cells = all_needed_cells(utp, given_symbols, needed_symbols)
+	# First pass: find the cells that must be in the module toplevel
+	for cell in needed_cells
+		code_str = cell.code
+		code_expr = Meta.parse(code_str)
+		if has_usings_imports(code_expr) || defines_type(code_expr)
+			destinations[cell] = :module
+		end
+	end
+	# Second pass: find the cells that depend on the given symbols,
+	# and thus must be in the function.
+	# Relies on needed_cells following the topological order.
+	dynamic_symbols = copy(given_symbols)
+	for cell in needed_cells
+		code_str = remove_trailing_semicolon(cell.code)
+		code_expr = Meta.parse(code_str)
+		node = utp.nodes[cell]
+		if any(in(dynamic_symbols), node.references)
+			get(destinations, cell, :none) === :module && error("""
+				This cell code must be put in the module, but it references
+				$(collect(node.references))
+				that may utimately depend on some of the template arguments
+				$(collect(given_symbols)).
+				""")
+			destinations[cell] = :function
+			union!(
+				dynamic_symbols,
+				node.definitions,
+				node.funcdefs_without_signatures
+			)
+		end
+	end
+	needed_cells, destinations
+end
+
 # ╔═╡ 58780697-0b89-420c-8b22-a31705ce45e4
-function nb_extractor_body(utp, template_dict::Dict, given_symbols)
+function nb_extractor_body(
+	utp,
+	template_dict::Dict,
+	given_symbols,
+	needed_symbols
+)
 	template_body = template_dict[:body]
 	node = EE.compute_reactive_node(template_body)
 	needed_symbols = filter(∉(given_symbols), node.references)
-	needed_cells = all_needed_cells(utp, given_symbols, needed_symbols)
-	
+	needed_cells, destinations = split_destinations(
+		utp,
+		given_symbols,
+		needed_symbols
+	)
+
+	module_expressions = Expr[]
 	body = Expr(:block)
 	# runnable lists cells in the correct order
 	# just keep only the needed ones
@@ -388,43 +481,15 @@ function nb_extractor_body(utp, template_dict::Dict, given_symbols)
 		# Fix "toplevel expression not at top level"
 		code_str = remove_trailing_semicolon(cell.code)
 		code_expr = Meta.parse(code_str)
-		if !has_usings_imports(code_expr)
-			# `using` and `import` are not allowed in a function.
-			# Just ignore, for now (TODO)
-			push!(body.args, code_expr)
-		end
-		# Pluto handles @bind specially, without modules
-		# Can't just look for @bind in node.references,
-		# because @bind was macroexpanded during the creation of m.utp.
-		bind_symbols = gather_bind_symbols(code_expr)
-		for bind_symbol in bind_symbols
-			# Better error for now, because if the source notebook is opened,
-			# then one might be surprised that the default value is used,
-			# rather the current value of the slider.
-			if bind_symbol ∉ given_symbols
-				bind_name = string(bind_symbol)
-				error("""
-				Encountered a `@bind` macro.
-				The variable `$(bind_name)` can't be extracted without ambiguity.
-				Please add `$(bind_name)` to the given arguments.
-				""")
-			end
-		end
+		check_safe_bind(code_expr, given_symbols)
+		# if not :function, than can be in the module toplevel by default
+		destination = get(destinations, cell, :default)
+		expressions = destination === :function ? body.args : module_expressions
+		push!(expressions, code_expr)
 	end
-	# type definitions should be put in the module
-	# TODO: combine this with the duplicate code below
-	types_expr = [
-		x
-		for x in body.args
-		if MacroTools.isexpr(x, :struct, :abstract, :primitive)
-	]
 	# get rid of const (not allowed in function body)
 	body = MacroTools.postwalk(body) do x
 		MacroTools.isexpr(x, :const) ? only(x.args) : x
-	end
-	# get rid of type definitions (not allowed in function body)
-	body = MacroTools.postwalk(body) do x
-		MacroTools.isexpr(x, :struct, :abstract, :primitive) ? nothing : x
 	end
 
 	append!(body.args, template_body.args)
@@ -432,7 +497,7 @@ function nb_extractor_body(utp, template_dict::Dict, given_symbols)
 	new_dict[:body] = body
 	fun_expr = MacroTools.combinedef(new_dict)
 	
-	return types_expr, fun_expr
+	return module_expressions, fun_expr
 end
 
 # ╔═╡ 20548484-991e-4b15-b6c5-8ea6b0bf69cb
@@ -464,9 +529,14 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═9194537f-8d42-422b-afa2-f86933522efc
 # ╠═8b28bd70-e4d9-4b21-990b-0f072e6a8802
 # ╠═58780697-0b89-420c-8b22-a31705ce45e4
+# ╠═89abc58d-366a-484e-a723-f20a364574d4
+# ╠═db0b5056-849c-40a1-b2f7-b9d89ba3ea75
 # ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
 # ╠═68af943e-a9ed-44e0-85a7-452fc62411ea
 # ╠═63c26add-ac5a-4a2c-9779-bd6c9710fe1a
-# ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
+# ╠═f4b031d7-8039-4b5b-9eca-89a2338c6b94
 # ╠═da3fb260-a858-457f-8430-c6a124d1d1e5
+# ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
+# ╠═d2c81f1c-2756-4877-809f-5cc7b827ce9d
+# ╠═aaa4c1e6-bf01-4843-a168-1bd8b252f749
 # ╠═20548484-991e-4b15-b6c5-8ea6b0bf69cb
