@@ -51,6 +51,18 @@ julia> fun(2)
 
 More examples can be found in the test/notebooks/extract_from_*.jl Pluto notebooks.
 
+# About packages management
+
+The destination notebook packages are always used.
+
+So the best experience should be expected with running notebooks within the [“shared environment”](https://plutojl.org/en/docs/packages-advanced/) pattern,
+e.g. with `Pkg.activate(Base.current_project())`.
+This ensures that both source and destination share exactly the same packages versions.
+
+In principle `@nb_extract` may be used with the standard Pluto package system, but then
+1) The necessary `using` statements _must_ be copied manually to the destination notebook
+   (otherwise they would be missing from the notebook project)
+2) Something that used to work in the source _might_ fail in the destination just because packages versions differ.
 
 ## Status
 
