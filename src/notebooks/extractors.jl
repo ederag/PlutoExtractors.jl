@@ -197,11 +197,11 @@ macro nb_extract(utp, template)
 	return quote
 		let
 			# utp is not complete yet, but enough to gather the module header
-			header = gather_header($(esc(utp)), $(QuoteNode(given_symbols)))
+			header_expressions = gather_header($(esc(utp)), $(QuoteNode(given_symbols)))
 			module_expr = get_module_expr(
 				$(QuoteNode(module_sym)),
 				$(esc(utp)),
-				header,
+				header_expressions,
 			)
 			m = $__module__.eval(module_expr)
 
@@ -282,13 +282,13 @@ function gather_header(utp, given)
 end
 
 # ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
-function get_module_expr(module_name::Symbol, topology, usings_imports)
+function get_module_expr(module_name::Symbol, topology, header_expressions)
 	Expr(
 		:toplevel,
 		:(
 			module $(module_name)
 				using PlutoExtractors
-				$(usings_imports...)
+				$(header_expressions...)
 				utp = PlutoExtractors.update_with_macroexpand(
 					$(module_name),
 					$(topology)
