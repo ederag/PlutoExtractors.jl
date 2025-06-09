@@ -76,7 +76,7 @@ expected_fun_wrapper_expr = PlutoExtractors.rm_all_lines(
 PlutoTest.@test fun_wrapper_expr == expected_fun_wrapper_expr
 
 # ╔═╡ 94b0b7e1-0a51-4cbd-92a1-ca8db5721312
-header_expr = PlutoExtractors.gather_header(utp, [])
+header_expr = PlutoExtractors.collect_header_expressions(utp, [])
 
 # ╔═╡ Cell order:
 # ╠═51df9d39-7d35-49e1-bac3-7354882bb141

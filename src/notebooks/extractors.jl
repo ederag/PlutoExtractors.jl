@@ -197,7 +197,7 @@ macro nb_extract(utp, template)
 	return quote
 		let
 			# utp is not complete yet, but enough to gather the module header
-			header_expressions = gather_header($(esc(utp)), $(QuoteNode(given_symbols)))
+			header_expressions = collect_header_expressions($(esc(utp)), $(QuoteNode(given_symbols)))
 			module_expr = get_module_expr(
 				$(QuoteNode(module_sym)),
 				$(esc(utp)),
@@ -257,7 +257,7 @@ function fake_bind_expr()
 end
 
 # ╔═╡ 56764600-5efa-45bd-bf9e-68dae3bde72c
-function gather_header(utp, given)
+function collect_header_expressions(utp, given)
 	expressions = Expr[]
 	for cell in utp.cell_order
 		expr = Meta.parse(cell.code)
