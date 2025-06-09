@@ -23,8 +23,8 @@ server_session.connected_clients[fakeclient.id] = fakeclient
 
 
 @testset "PlutoExtractors.jl" begin
-	@testset "try" begin
-	    include("try.jl")
+	@testset "Helpers" begin
+		include("notebooks/helpers.jl")
 	end
 
 	@testset "Extract from source_basic.jl" begin
@@ -42,8 +42,25 @@ server_session.connected_clients[fakeclient.id] = fakeclient
 	@testset "Extract from source_types.jl" begin
 		include("notebooks/extract_from_source_types.jl")
 	end
+
+	# Test functions and callable structs => after types
+	@testset "Extract from source_functions.jl" begin
+		include("notebooks/extract_from_source_callables.jl")
+	end
 	
 	@testset "Extract from source_unpack.jl" begin
 		include("notebooks/extract_from_source_unpack.jl")
+	end
+	
+	@testset "Extract from source_markdown.jl" begin
+		include("notebooks/extract_from_source_markdown.jl")
+	end
+	
+	@testset "Extract from source_bind.jl" begin
+		include("notebooks/extract_from_source_bind.jl")
+	end
+
+	@testset "Live" begin
+	    include("live.jl")
 	end
 end

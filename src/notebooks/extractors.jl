@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.10
 
 #> [frontmatter]
 #> title = ""
@@ -7,6 +7,18 @@
 
 using Markdown
 using InteractiveUtils
+
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    #! format: off
+    return quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+    #! format: on
+end
 
 # ╔═╡ 3e3102e5-9bbd-4592-a749-821ee5e42c7c
 import Pkg
@@ -18,149 +30,73 @@ import Pkg
 Pkg.activate(Base.current_project())
   ╠═╡ =#
 
-# ╔═╡ 0c9f04da-2e65-4b82-ac1e-1520391572a2
-using ExpressionExplorer
-
 # ╔═╡ 83dbf999-dfdf-43c8-882b-f11e17e09a3a
 using Pluto
 
 # ╔═╡ 8037bbf1-fae0-47a3-a768-a089f21349a8
 using MacroTools
 
+# ╔═╡ 0c9f04da-2e65-4b82-ac1e-1520391572a2
+import ExpressionExplorer as EE
+
 # ╔═╡ 4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 import PlutoDependencyExplorer as PDE
 
+# ╔═╡ c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
+function load_nb_with_topology(path::AbstractString)
+	throw("Dropped in v0.2.0. Please use `load_updated_topology` instead")
+end
+
 # ╔═╡ 7e8a7524-1ae6-439d-98c6-5b2390014096
 """
-    load_nb_with_topology(path)
+    load_updated_topology(
+        path;
+        get_code_str = c -> c.code,
+        get_code_expr = c -> Meta.parse(c.code)
+    )
 
-Load a `Pluto` notebook, with topology and dependency cache filled.
+Return the topology of a `Pluto` notebook found at `path`,
+with references and definitions filled.
+`get_code_str` and `get_code_expr` are passed to
+[`PlutoDependencyExplorer.updated_topology`](@ref);
+see that function doc for more details.
 
 See also [`@nb_extract`](@ref)
 """
-function load_nb_with_topology(path::AbstractString)
+function load_updated_topology(
+	path::AbstractString;
+	get_code_str = c -> c.code,
+	get_code_expr = c -> Meta.parse(c.code),
+)
 	nb = Pluto.load_notebook_nobackup(String(path))
 
-	# To handle macros. TODO: room for optimization
-	sub_session = Pluto.ServerSession()
-	Pluto.update_run!(sub_session, nb, nb.cells)
+	empty_topology = PDE.NotebookTopology{Pluto.Cell}()
 
-	nb
+	# cf. https://plutojl.org/en/docs/plutodependencyexplorer/
+	PDE.updated_topology(
+		empty_topology,  # old topology
+		PDE.all_cells(nb.topology),  # notebook cells
+		PDE.all_cells(nb.topology);  # cells to consider (they changed)
+		get_code_str,
+		get_code_expr,
+    )
 end
 
-# ╔═╡ a8b197ad-765b-475e-9010-d73df9d24c13
-function find_definition_cells(nb::Pluto.Notebook, symbols)
-	filter(
-		cell -> any(in(nb.topology.nodes[cell].definitions), symbols),
-		nb.cells
-	)
-end
+# ╔═╡ b129127a-d2dc-490c-8f38-b0f210d3070c
+function template_analysis(template::Expr)
+	dict = MacroTools.splitdef(template)
 
-# ╔═╡ 447318b6-e302-4f16-b149-52108b4283fe
-find_function_cells(nb::Pluto.Notebook, symbols) = filter(
-	cell -> any(
-		symbol -> (
-			symbol in nb.topology.nodes[cell].funcdefs_with_signatures
-			|| symbol in nb.topology.nodes[cell].funcdefs_without_signatures
-		),
-		symbols
-	),
-	nb.cells
-)
-
-# ╔═╡ 9fb50a81-390d-44bc-8819-e9ed97d1e0de
-function symbols_defined(nb::Pluto.Notebook, cell)
-	node = nb.topology.nodes[cell]
-	union(
-		node.definitions,
-		node.funcdefs_with_signatures,
-		node.funcdefs_without_signatures,
-	)
-end
-
-# ╔═╡ 2300d1df-94cd-4f7e-bd0b-07bad790464f
-find_symbols_cells(nb::Pluto.Notebook, symbols) = filter(
-	# TODO: this can surely be simplified now
-	cell -> any(
-		symbol -> symbol in symbols_defined(nb, cell),
-		symbols
-	),
-	nb.cells
-)
-
-# ╔═╡ efa1e893-34b0-4a14-a0e2-600a365eb717
-function all_needed_cells(nb::Pluto.Notebook, cell; given=[], visited=nothing)
-	if all(in(given), symbols_defined(nb, cell))
-		return Set{typeof(cell)}()
-	end
-	# upstream_cells_map is not recursive; it contains only the direct parents
-	cells = Set([cell])
-	if isnothing(visited)
-		visited = [cell]
-	else
-		push!(visited, cell)
+	# symbols that will be given by the caller
+	given_symbols = Set{Symbol}()
+	for arg in Iterators.flatten((dict[:args], dict[:kwargs]))
+		name, _ = MacroTools.splitarg(arg)
+		push!(given_symbols, name)
 	end
 
-	# upstream_cell_map values contain the list of parent cells
-	# TODO: looks like there is a Pluto.upstream_cells_map(cell)
-	for up_deps in values(cell.cell_dependencies.upstream_cells_map)
-		# each up_deps is a vector of cells
-		for up_dep in up_deps
-			up_dep in visited && continue
-			union!(cells, all_needed_cells(nb, up_dep; given))
-		end
-	end
-	cells
-end
-
-# ╔═╡ e4ecb782-85af-4e66-a7af-72eca79bd191
-function has_usings_imports(ex)
-	(; usings, imports) = compute_usings_imports(ex)
-	!isempty(usings) || !isempty(imports)
-end
-
-# ╔═╡ c71b4e52-5d6a-4a82-b465-b755217198e6
-function nb_extractor_body(nb::Pluto.Notebook; given=[], outputs=[])
-	output_cells = find_symbols_cells(nb, outputs)
-	isempty(output_cells) && error(
-		"Unable to extract any definition for $outputs"
-	)
-	needed_cells = mapreduce(
-		c -> all_needed_cells(nb, c; given),
-		union,
-		output_cells
-	)
-	body = Expr(:block)
-	# runnable lists cells in the correct order
-	# just keep only the needed ones
-	tpo = PDE.topological_order(nb.topology)
-	# runnable first to keep its order
-	for cell in tpo.runnable ∩ needed_cells
-		# this returns a :toplevel expression
-		cell_expr = Pluto.parse_custom(nb, cell)
-		if !any(ex -> has_usings_imports(ex), cell_expr.args)
-			# `using` and `import` are not allowed in a function.
-			# Just ignore, for now (TODO)
-			append!(body.args, cell_expr.args)
-		end
-	end
-	# get rid of const (not allowed in function body)
-	body = MacroTools.postwalk(body) do x
-		MacroTools.isexpr(x, :const) ? only(x.args) : x
-	end
-	# get rid of type definitions (not allowed in function body)
-	body = MacroTools.postwalk(body) do x
-		MacroTools.isexpr(x, :struct, :abstract, :primitive) ? nothing : x
-	end
-	return body
-end
-
-# ╔═╡ ea0ba472-50a3-4ab6-a221-0b710b361fca
-function nb_extractor(nb::Pluto.Notebook; given=[], outputs=[])
-	code = nb_extractor_code(nb; given, outputs)
-	return eval(
-		Meta.parse(code)
-	)
+	template_body = dict[:body]
+	node = EE.compute_reactive_node(template_body)
+	needed_symbols = filter(∉(given_symbols), node.references)
+	dict, given_symbols, needed_symbols
 end
 
 # ╔═╡ ba256080-73fb-4de4-be72-101318c82029
@@ -170,38 +106,45 @@ strip_types(x::Symbol) = x
 # This function is used to be able to strip types from the extracted arguments to forward the function call to the gensymed one
 # We want to do something like `fun(a::Something) = MODULE.#xxx#fun(a)`
 function strip_types(x::Expr)::Symbol
-	if Meta.isexpr(x, [:(::), :kw])
-		return strip_types(x.args[1]) # We recursively call strip_types till we reach the symbol or we error
-	else
-		error("This function should only receive either symbols or Expr of the type `x::Something`, `x=something` or `x::Something=something`. Instead `$x` was given as input")
-	end
+	(arg_name, arg_type, is_splat, default) = MacroTools.splitarg(x)
+	arg_name
+end
+
+# ╔═╡ 5c15516e-e3e1-401b-97b5-f4ce60e3a234
+function fun_wrapper(template_dict, module_sym::Symbol)
+	# Wrapper to be evaluated in the caller scope,
+	# that will call the module function
+	# Adapted from https://fluxml.ai/MacroTools.jl/dev/utilities/
+	wrapper_dict = copy(template_dict)
+	wrapper_dict[:body] = :(
+		$(module_sym).$(template_dict[:name])(
+			$(strip_types.(template_dict[:args])...);
+			$(strip_types.(template_dict[:kwargs])...)
+		)
+	)
+	MacroTools.combinedef(wrapper_dict)
 end
 
 # ╔═╡ c2f701da-aaa7-4af5-bada-5acb05465b3f
 """
-    @nb_extract(nb, template)
+    @nb_extract(utp, template)
 
-Create a function out of a `Pluto` notebook, based on a template.
+Create a function out of a `Pluto` notebook updated topology,
+based on a template.
 
-The notebook `nb` must be a `Pluto.Notebook`,
-with up-to-date topology and dependency cache
-(for instance from [`load_nb_with_topology`](@ref)).
+The notebook updated topology `utp` is obtained
+from [`load_updated_topology`](@ref).
+This is a shallow first pass that will help determine the required packages.
 
 The signature of the returned function is exactly the one of the `template`.
-The argument names must match symbols defined in the notebook.
-The arguments values will be used instead of the source notebook ones
-in the evaluation.
+The arguments take precedence over the values defined in the notebook.
 
-The return value of this function is found in the `template` body.
-This body must consist of a single `return` statement.
-The return value can be a single variable (e.g. ` return c`),
-a tuple (e.g. `return (b, c)`), or a named tuple (e.g. `return (; b = b, whatever = c)`).
+A second pass performed on `utp` and the template are then analyzed
+to find the cells that are necessary to evaluate the template body
+(the cells that define `b` and `c` in the example below).
 
-The notebook `nb` is then analyzed to find the cells that are necessary
-to evaluate the return value
-(the cells that define `a` and `b` in the last examples).
-
-Those cells code is used as the core of the function body.
+Those cells code is prepended to the template body,
+to complete the function body.
 
 The result of the macro is this fleshed-out function,
 just as if it had been typed by hand.
@@ -210,17 +153,17 @@ Preliminary benchmarks show no overhead.
 Remark: `@nb_extract` can be used not only from a running Pluto notebook,
 but from anywhere else (a script, the REPL, ...).
 
-# Examples
+# Example
 Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
 here is how to make a function that return the value `c` from any given `a`:
 ```jldoctest
-julia> using PlutoExtractors: load_nb_with_topology, @nb_extract
+julia> using PlutoExtractors: load_updated_topology, @nb_extract
 julia> source_path = pkgdir(PlutoExtractors,
 	"test", "notebooks", "source_basic.jl"
 )  # to be replaced with the path of your source notebook
-julia> nb = load_nb_with_topology(source_path);
+julia> utp = load_updated_topology(source_path);
 julia> @nb_extract(
-	nb,
+	utp,
 	function fun(a)
 		return c
 	end
@@ -229,82 +172,343 @@ julia> fun(2)
 8
 ```
 
-See also [`load_nb_with_topology`](@ref)
+See also [`load_updated_topology`](@ref)
 """
-macro nb_extract(nb, template)
-	# analysis of the function signature and body
-	d = MacroTools.splitdef(template)
+macro nb_extract(utp, template)
+	# will put the function definition inside a module,
+	# so that the necessary packages are accessible
+	# both for the macroexpansion phase (to determine dependencies)
+	# and for the function
+	module_sym = gensym(:PlutoExtract)
 
-	# symbols that will be given by the caller
-	given = []
-	for arg in Iterators.flatten((d[:args], d[:kwargs]))
-		name, _ = MacroTools.splitarg(arg)
-		push!(given, name)
-	end
+	(template_dict, given_symbols, needed_symbols) = template_analysis(template)
 
-	# symbols that will be required to build the return
-	outputs = []
-	# template body, where the return symbols must be found
-	body = d[:body]
-	# @info MacroTools.rmlines(body)
-	# note: those `return` are part of the template, not of this macro
-	if MacroTools.@capture(
-		body,
-		return (; kws__)  # template to return a NamedTuple
+	# The wrapper expression has to be build beforehand,
+	# to be put at the end of the quote,
+	# to be evaluated in the local scope rather than in toplevel
+	fun_wrapper_expr = fun_wrapper(
+		template_dict,
+		module_sym
 	)
-		for kw in kws
-			@capture(kw, key_ = val_)
-			push!(outputs, val)
-		end
-	elseif MacroTools.@capture(
-		body,
-		return (symbols__,)  # template to return a Tuple
-	)
-		for symbol in symbols
-			push!(outputs, symbol)
-		end
-	elseif MacroTools.@capture(
-		body,
-		return symbol_  # template to return a single variable
-	)
-		push!(outputs, symbol)
-	else
-		throw(ErrorException("""
-			No acceptable return statement found in '''
-			$body
-			'''
-			"""))
-	end
 
-	# We gensym the name of the function to be evaluated so it's not easibly accessible directly, in order to make the macro also in let blocks without polluting the global scope
-	gensym_name = gensym(d[:name])
-	# We already create the expression that will be evaluated to map the gensymed function evaluated in the module to the non-gensymed name. This is also useful to trigger Pluto reactivity.
-	expr = let dict = d # Adapted from https://fluxml.ai/MacroTools.jl/dev/utilities/
-		rtype = get(dict, :rtype, :Any)
-		:(function $(dict[:name])($(dict[:args]...);
-		                          $(dict[:kwargs]...))::$rtype where {$(dict[:whereparams]...)}
-		  $(__module__).$(gensym_name)($(strip_types.(dict[:args])...);
-		                          $(strip_types.(dict[:kwargs])...))
-		end)
-	end
-	# We assign the gensym_name to the function name in the dict
-	d[:name] = gensym_name
-	# `nb_extractor_body` needs to know about the real notebook
+	# `nb_extractor_core` needs to know about the real notebook
 	# so the following can only be done at runtime.
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
 		let
-			extracted_block = nb_extractor_body(
-				$(esc(nb));
-				given=$given,
-				outputs=$outputs
+			# utp is not complete yet, but enough to gather the module header
+			header_expressions = collect_header_expressions($(esc(utp)), $(QuoteNode(given_symbols)))
+			module_expr = get_module_expr(
+				$(QuoteNode(module_sym)),
+				$(esc(utp)),
+				header_expressions,
 			)
-			prepend!($d[:body].args, extracted_block.args)
-			$__module__.eval(MacroTools.combinedef($d))
+			m = $__module__.eval(module_expr)
+
+			# Now can use the utp of the module
+			# (more complete thanks to the macroexpansion,
+			#  that succeeds because the packages are available inside the module)
+			types_expr, fun_expr = nb_extractor_core(
+				m.utp,
+				$(QuoteNode(template_dict)),
+				$(QuoteNode(given_symbols)),
+				$(QuoteNode(needed_symbols))
+			)
+
+			# Put in the module the "types" expressions (`struct` for instance)
+			# (not allowed in the function)
+			for expr in types_expr
+				Base.eval(m, expr)
+			end
+
+			Base.eval(m, fun_expr)
 		end
-		$(esc(expr))
+		# This last expression will be evaluated in the caller's scope
+		$(esc(fun_wrapper_expr))
 	end
 end
+
+
+# ╔═╡ 7fe4dc9a-9821-4924-bacb-0cebae1e74bd
+function fake_bind_expr()
+	quote
+		# Code reformatted from Pluto submodule PlutoRunner/src/bonds.jl fakebind
+		# (the one that Pluto inserts in the .jl file)
+		macro bind(def, element)
+		    return quote
+		        local iv = try
+						Base.loaded_modules[
+							Base.PkgId(
+								Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+								"AbstractPlutoDingetjes"
+							)
+						].Bonds.initial_value
+					catch
+						b -> missing
+					end
+		        local el = $(esc(element))
+		        global $(esc(def)) = Core.applicable(Base.get, el) ?
+					Base.get(el) :
+					iv(el)
+		        el
+		    end
+		end
+	end
+end
+
+# ╔═╡ 56764600-5efa-45bd-bf9e-68dae3bde72c
+function collect_header_expressions(utp, given)
+	expressions = Expr[]
+	for cell in utp.cell_order
+		expr = Meta.parse(cell.code)
+		node = utp.nodes[cell]
+
+		# Pluto allows to write markdown strings
+		# without an explicit `using Markdown`.
+		if Symbol("@md_str") in node.macrocalls
+			push!(expressions, :(using Markdown))
+		end
+
+		# Need all usings and imports
+		# to create the full m.utp (with macroexpansion).
+		usings_imports = EE.compute_usings_imports(expr)
+		append!(expressions, usings_imports.usings)
+		append!(expressions, usings_imports.imports)
+	end
+	# Needed for update_with_macroexpand to succeed, if any @bind
+	expr = fake_bind_expr()
+	push!(expressions, expr)
+	expressions
+end
+
+# ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
+function get_module_expr(module_name::Symbol, topology, header_expressions)
+	Expr(
+		:toplevel,
+		:(
+			module $(module_name)
+				using PlutoExtractors
+				$(header_expressions...)
+				utp = PlutoExtractors.update_with_macroexpand(
+					$(module_name),
+					$(topology)
+				)
+			end
+		)
+	)
+end
+
+# ╔═╡ db0b5056-849c-40a1-b2f7-b9d89ba3ea75
+get_cell_type(topology) = eltype(topology.cell_order)
+
+# ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
+function update_with_macroexpand(_module, topology::PDE.NotebookTopology)
+	cell_type = get_cell_type(topology)
+	empty_topology = PDE.NotebookTopology{cell_type}()
+	PDE.updated_topology(
+		empty_topology,  # old topology
+		PDE.all_cells(topology),  # notebook cells
+		PDE.all_cells(topology);  # cells to consider (they changed)
+		get_code_str = c -> c.code,
+		get_code_expr = c -> macroexpand(
+			_module,
+			Meta.parse(c.code)
+		)
+    )
+end
+
+# ╔═╡ 68af943e-a9ed-44e0-85a7-452fc62411ea
+# non-recursive version,
+# finds exactly the cells defining the symbols that are not in given_symbols
+function needed_cells_1(utp::PDE.NotebookTopology, given_symbols, needed_symbols)
+	needed_symbols = filter(∉(given_symbols), needed_symbols)
+	PDE.where_assigned(utp, needed_symbols)
+end
+
+# ╔═╡ efa1e893-34b0-4a14-a0e2-600a365eb717
+function all_needed_cells(
+	utp::PDE.NotebookTopology,
+	given_symbols,
+	needed_symbols
+)::AbstractVector
+	needed = needed_cells_1(utp, given_symbols, needed_symbols)
+	to_visit = copy(needed)
+	while !isempty(to_visit)
+		current_cell = pop!(to_visit)
+		# We are only visiting needed cells
+		current_cell ∉ needed && push!(needed, current_cell)
+		current_node = utp.nodes[current_cell]
+		for cell in needed_cells_1(utp, given_symbols, current_node.references)
+			# not in needed => not visited yet
+			cell ∉ needed && push!(to_visit, cell)
+		end
+	end
+	tpo = PDE.topological_order(utp)
+	# runnable first to keep its order
+	tpo.runnable ∩ needed
+end
+
+# ╔═╡ 63c26add-ac5a-4a2c-9779-bd6c9710fe1a
+function remove_trailing_semicolon(str)
+	rstrip(c -> c == ';' || isspace(c), str)
+end
+
+# ╔═╡ da3fb260-a858-457f-8430-c6a124d1d1e5
+function gather_bind_symbols(ex)
+	symbols = Symbol[]
+	to_visit = Expr[ex]
+	while !isempty(to_visit)
+		ex = pop!(to_visit)
+		if ex.head === :macrocall && ex.args[1] === Symbol("@bind")
+			# args[2] is the LineNumberNode
+			symbol = ex.args[3]
+			push!(symbols, symbol)
+		elseif ex isa Expr
+			for arg in ex.args
+				arg isa Expr && push!(to_visit, arg)
+			end
+		end
+	end
+	symbols
+end
+
+# ╔═╡ f4b031d7-8039-4b5b-9eca-89a2338c6b94
+function check_safe_bind(code_expr, given_symbols)
+	# Pluto handles @bind specially, without modules
+	# Can't just look for @bind in node.references,
+	# because @bind was macroexpanded during the creation of m.utp.
+	bind_symbols = gather_bind_symbols(code_expr)
+	for bind_symbol in bind_symbols
+		# Better error for now, because if the source notebook is opened,
+		# then one might be surprised that the default value is used,
+		# in stead of the current value of the slider.
+		if bind_symbol ∉ given_symbols
+			bind_name = string(bind_symbol)
+			error("""
+			Encountered a `@bind` macro.
+			The variable `$(bind_name)` can't be extracted without ambiguity.
+			Please add `$(bind_name)` to the given arguments.
+			""")
+		end
+	end
+end
+
+# ╔═╡ e4ecb782-85af-4e66-a7af-72eca79bd191
+function has_usings_imports(ex)
+	(; usings, imports) = EE.compute_usings_imports(ex)
+	!isempty(usings) || !isempty(imports)
+end
+
+# ╔═╡ d2c81f1c-2756-4877-809f-5cc7b827ce9d
+function defines_type(ex::Expr)
+	if MacroTools.isexpr(ex, :struct, :abstract, :primitive)
+		return true
+	else
+		return any(defines_type, ex.args)
+	end
+end
+
+# ╔═╡ aaa4c1e6-bf01-4843-a168-1bd8b252f749
+# fallback (for e.g. Symbol, LineNumberNode)
+defines_type(x) = false
+
+# ╔═╡ 89abc58d-366a-484e-a723-f20a364574d4
+function split_destinations(
+	utp::PDE.NotebookTopology,
+	given_symbols,
+	needed_symbols
+)
+	cell_type = get_cell_type(utp)
+	destinations = Dict{cell_type, Symbol}()
+	needed_cells = all_needed_cells(utp, given_symbols, needed_symbols)
+	# First pass: find the cells that must be in the module toplevel
+	for cell in needed_cells
+		code_str = cell.code
+		code_expr = Meta.parse(code_str)
+		if has_usings_imports(code_expr) || defines_type(code_expr)
+			destinations[cell] = :module
+		end
+	end
+	# Second pass: find the cells that depend on the given symbols,
+	# and thus must be in the function.
+	# Relies on needed_cells following the topological order.
+	dynamic_symbols = copy(given_symbols)
+	for cell in needed_cells
+		code_str = remove_trailing_semicolon(cell.code)
+		code_expr = Meta.parse(code_str)
+		node = utp.nodes[cell]
+		if any(in(dynamic_symbols), node.references)
+			get(destinations, cell, :none) === :module && error("""
+				This cell code must be put in the module, but it references
+				$(collect(node.references))
+				that may utimately depend on some of the template arguments
+				$(collect(given_symbols)).
+				""")
+			destinations[cell] = :function
+			union!(
+				dynamic_symbols,
+				node.definitions,
+				node.funcdefs_without_signatures
+			)
+		end
+	end
+	needed_cells, destinations
+end
+
+# ╔═╡ 58780697-0b89-420c-8b22-a31705ce45e4
+function nb_extractor_core(
+	utp,
+	template_dict::Dict,
+	given_symbols,
+	needed_symbols
+)
+	template_body = template_dict[:body]
+	node = EE.compute_reactive_node(template_body)
+	needed_symbols = filter(∉(given_symbols), node.references)
+	needed_cells, destinations = split_destinations(
+		utp,
+		given_symbols,
+		needed_symbols
+	)
+
+	module_expressions = Expr[]
+	body = Expr(:block)
+	# runnable lists cells in the correct order
+	# just keep only the needed ones
+	tpo = PDE.topological_order(utp)
+	# runnable first to keep its order
+	for cell in tpo.runnable ∩ needed_cells
+		# Fix "toplevel expression not at top level"
+		code_str = remove_trailing_semicolon(cell.code)
+		code_expr = Meta.parse(code_str)
+		check_safe_bind(code_expr, given_symbols)
+		# if not :function, than can be in the module toplevel by default
+		destination = get(destinations, cell, :default)
+		expressions = destination === :function ? body.args : module_expressions
+		push!(expressions, code_expr)
+	end
+	# get rid of const (not allowed in function body)
+	body = MacroTools.postwalk(body) do x
+		MacroTools.isexpr(x, :const) ? only(x.args) : x
+	end
+
+	append!(body.args, template_body.args)
+	new_dict = copy(template_dict)
+	new_dict[:body] = body
+	fun_expr = MacroTools.combinedef(new_dict)
+	
+	return module_expressions, fun_expr
+end
+
+# ╔═╡ 20548484-991e-4b15-b6c5-8ea6b0bf69cb
+"""
+    rm_all_lines(ex)
+
+Return the expression ex expurged from all LineNumberNodes.
+
+Current limitation: does not propagate into `quote` ?
+"""
+rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 
 # ╔═╡ Cell order:
 # ╠═3e3102e5-9bbd-4592-a749-821ee5e42c7c
@@ -313,15 +517,26 @@ end
 # ╠═83dbf999-dfdf-43c8-882b-f11e17e09a3a
 # ╠═4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 # ╠═8037bbf1-fae0-47a3-a768-a089f21349a8
+# ╠═c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
 # ╠═7e8a7524-1ae6-439d-98c6-5b2390014096
-# ╠═a8b197ad-765b-475e-9010-d73df9d24c13
-# ╠═447318b6-e302-4f16-b149-52108b4283fe
-# ╠═9fb50a81-390d-44bc-8819-e9ed97d1e0de
-# ╠═2300d1df-94cd-4f7e-bd0b-07bad790464f
-# ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
-# ╠═c71b4e52-5d6a-4a82-b465-b755217198e6
-# ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
-# ╠═ea0ba472-50a3-4ab6-a221-0b710b361fca
+# ╠═c2f701da-aaa7-4af5-bada-5acb05465b3f
+# ╠═b129127a-d2dc-490c-8f38-b0f210d3070c
+# ╠═5c15516e-e3e1-401b-97b5-f4ce60e3a234
 # ╠═ba256080-73fb-4de4-be72-101318c82029
 # ╠═feadac3a-859c-4915-bfc6-8fa607d6b606
-# ╠═c2f701da-aaa7-4af5-bada-5acb05465b3f
+# ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
+# ╠═7fe4dc9a-9821-4924-bacb-0cebae1e74bd
+# ╠═9194537f-8d42-422b-afa2-f86933522efc
+# ╠═8b28bd70-e4d9-4b21-990b-0f072e6a8802
+# ╠═58780697-0b89-420c-8b22-a31705ce45e4
+# ╠═89abc58d-366a-484e-a723-f20a364574d4
+# ╠═db0b5056-849c-40a1-b2f7-b9d89ba3ea75
+# ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
+# ╠═68af943e-a9ed-44e0-85a7-452fc62411ea
+# ╠═63c26add-ac5a-4a2c-9779-bd6c9710fe1a
+# ╠═f4b031d7-8039-4b5b-9eca-89a2338c6b94
+# ╠═da3fb260-a858-457f-8430-c6a124d1d1e5
+# ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
+# ╠═d2c81f1c-2756-4877-809f-5cc7b827ce9d
+# ╠═aaa4c1e6-bf01-4843-a168-1bd8b252f749
+# ╠═20548484-991e-4b15-b6c5-8ea6b0bf69cb

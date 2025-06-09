@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -37,11 +37,11 @@ md"""
 md"## Just one variable"
 
 # ╔═╡ b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
-nb = load_nb_with_topology(source_nb_file)
+utp = load_updated_topology(source_nb_file)
 
 # ╔═╡ a8ac792a-d83b-48ea-a98b-79c43ef76c2e
 @nb_extract(
-	nb,
+	utp,
 	function fun1()
 		return a
 	end
@@ -60,7 +60,7 @@ md"""
 
 # ╔═╡ aada1eb9-5887-4c4f-a796-45217ff8ece7
 @nb_extract(
-	nb,
+	utp,
 	function fun_out_nt_a_c()
 		return (; a = a, c = c)
 	end
@@ -79,7 +79,7 @@ md"""
 
 # ╔═╡ abfcb9bd-8c20-47a9-9f1c-12e75426d6df
 @nb_extract(
-	nb,
+	utp,
 	function fun_a_out_nt_b_c(a)
 		return (; b = b, c = c)
 	end
@@ -98,7 +98,7 @@ md"""
 
 # ╔═╡ 66929e56-fb7f-49fe-a0ce-b4a58b558b37
 @nb_extract(
-	nb,
+	utp,
 	function fun_6(; a=2)
 		return c
 	end
@@ -118,7 +118,7 @@ md"""
 # ╔═╡ 02e44c02-d427-4646-afdc-b52f1e5a9595
 res_inner = let
 	@nb_extract(
-		nb,
+		utp,
 		function inner_fun(a)
 			return c
 		end
@@ -139,7 +139,7 @@ md"""
 
 # ╔═╡ 484fb80e-2722-42b9-bb39-6f2cade9b076
 @nb_extract(
-	nb,
+	utp,
 	function fun_5(a::Int)
 		return c
 	end
@@ -157,14 +157,15 @@ md"""
 """
 
 # ╔═╡ 4366181c-9516-436e-8072-31488d4722ab
-PlutoTest.@test_throws ErrorException(
-	"Unable to extract any definition for Any[:non_existing]"
-) @nb_extract(
-	nb,
+@nb_extract(
+	utp,
 	function fun_error_1()
 		return non_existing  # :non_existing is not defined in nb
 	end
 )
+
+# ╔═╡ 45d63dc5-6913-4738-a16f-db3003be6007
+PlutoTest.@test_throws UndefVarError(:non_existing) fun_error_1()
 
 # ╔═╡ Cell order:
 # ╠═64f6372a-eff1-11ec-2395-31d68eda5f3a
@@ -201,3 +202,4 @@ PlutoTest.@test_throws ErrorException(
 # ╠═f4410aeb-b742-4732-9789-640ec466637a
 # ╠═62989d10-0da0-41ca-8d70-f6d2d2bb5435
 # ╠═4366181c-9516-436e-8072-31488d4722ab
+# ╠═45d63dc5-6913-4738-a16f-db3003be6007
