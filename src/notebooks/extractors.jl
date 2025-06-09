@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.10
 
 #> [frontmatter]
 #> title = ""
@@ -87,7 +87,7 @@ function template_analysis(template::Expr)
 	dict = MacroTools.splitdef(template)
 
 	# symbols that will be given by the caller
-	given_symbols = Symbol[]
+	given_symbols = Set{Symbol}()
 	for arg in Iterators.flatten((dict[:args], dict[:kwargs]))
 		name, _ = MacroTools.splitarg(arg)
 		push!(given_symbols, name)

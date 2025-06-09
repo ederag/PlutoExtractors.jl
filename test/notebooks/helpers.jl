@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.10
 
 using Markdown
 using InteractiveUtils
@@ -53,6 +53,13 @@ template = :(
 	needed_symbols
 ) = PlutoExtractors.template_analysis(template)
 
+# ╔═╡ 1925349c-4afc-4d28-813c-9730e724d240
+# Sets have unique elements. Not sure this is mandatory, but it feels safer.
+PlutoTest.@test given_symbols isa Set
+
+# ╔═╡ 847ee1f7-0687-467a-9101-ab37c650986e
+PlutoTest.@test needed_symbols isa Set
+
 # ╔═╡ b5e5cf07-df5b-4edd-9ef1-6ab38081133d
 # like `gensym(:PlutoExtractors)`, but fixed
 # Safe here, since there are no evaluations in this notebook.
@@ -90,6 +97,8 @@ header_expr = PlutoExtractors.collect_header_expressions(utp, [])
 # ╠═f3ee4c34-3c96-4254-aa07-34d67efaedc3
 # ╠═e7ea8a83-7b0f-4479-921d-fdc9ac80218a
 # ╠═6f45c8aa-557c-4e08-8669-40029b60497e
+# ╠═1925349c-4afc-4d28-813c-9730e724d240
+# ╠═847ee1f7-0687-467a-9101-ab37c650986e
 # ╠═b5e5cf07-df5b-4edd-9ef1-6ab38081133d
 # ╠═847893f3-a0a6-4d09-a30c-9004b833b65c
 # ╠═d140e98b-721b-41e4-9d2d-5cd4db1b981d
