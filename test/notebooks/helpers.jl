@@ -25,6 +25,9 @@ using PlutoExtractors
 # ╔═╡ 9f58ade4-c81b-45fb-a497-4f7503b94e13
 import PlutoTest
 
+# ╔═╡ a9193549-5d53-4d13-b0c5-3648c9357afe
+import PlutoDependencyExplorer as PDE
+
 # ╔═╡ 88334e90-1486-40e2-84d5-8f49eda045fe
 root_dir = pkgdir(PlutoExtractors)
 
@@ -85,12 +88,31 @@ PlutoTest.@test fun_wrapper_expr == expected_fun_wrapper_expr
 # ╔═╡ 94b0b7e1-0a51-4cbd-92a1-ca8db5721312
 header_expr = PlutoExtractors.collect_header_expressions(utp, [])
 
+# ╔═╡ fb850d61-5795-4424-bcd2-7ae811d98c92
+tpo = PDE.topological_order(utp)
+
+# ╔═╡ bc7ebc67-cb09-4043-9ba1-d5786b183cd3
+function is_sorted_in(cells, tpo::PDE.TopologicalOrder)
+	issorted(indexin(cells, tpo.runnable))
+end
+
+# ╔═╡ 1f903163-f9f1-4d11-a57f-d67c88970d1c
+needed_cells = PlutoExtractors.all_needed_cells(
+	utp,
+	given_symbols,
+	needed_symbols
+)
+
+# ╔═╡ 6f71127e-a15c-4ec9-a6b7-d7016d52e390
+PlutoTest.@test is_sorted_in(needed_cells, tpo)
+
 # ╔═╡ Cell order:
 # ╠═51df9d39-7d35-49e1-bac3-7354882bb141
 # ╠═67aa154f-a294-41ce-aea5-36cf5ddcf1de
 # ╠═acaf0efa-c78f-469a-b5dd-4a2c6f3cbabf
 # ╠═640d5a61-0e23-4614-96d7-6d79e015eee3
 # ╠═9f58ade4-c81b-45fb-a497-4f7503b94e13
+# ╠═a9193549-5d53-4d13-b0c5-3648c9357afe
 # ╠═88334e90-1486-40e2-84d5-8f49eda045fe
 # ╠═d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
 # ╠═8411b188-54d9-43fd-9d47-6bd6d7f5ed86
@@ -104,3 +126,7 @@ header_expr = PlutoExtractors.collect_header_expressions(utp, [])
 # ╠═d140e98b-721b-41e4-9d2d-5cd4db1b981d
 # ╠═61ded599-db04-43a5-a01a-ebf5892eef2b
 # ╠═94b0b7e1-0a51-4cbd-92a1-ca8db5721312
+# ╠═fb850d61-5795-4424-bcd2-7ae811d98c92
+# ╠═bc7ebc67-cb09-4043-9ba1-d5786b183cd3
+# ╠═1f903163-f9f1-4d11-a57f-d67c88970d1c
+# ╠═6f71127e-a15c-4ec9-a6b7-d7016d52e390

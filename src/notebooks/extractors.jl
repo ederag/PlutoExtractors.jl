@@ -330,7 +330,7 @@ function all_needed_cells(
 	utp::PDE.NotebookTopology,
 	given_symbols,
 	needed_symbols
-)
+)::AbstractVector
 	needed = needed_cells_1(utp, given_symbols, needed_symbols)
 	to_visit = copy(needed)
 	while !isempty(to_visit)
