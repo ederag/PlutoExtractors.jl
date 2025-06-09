@@ -87,7 +87,7 @@ b_code = utp.codes[b_cell]
 EEE.pretransform_pluto(b_code.parsedcode)
 
 # ╔═╡ 1d54eab5-af3a-400d-90d8-97be0cffe35b
-PlutoExtractors.nb_extractor_body(utp, given=[], outputs=[:b])
+PlutoExtractors.nb_extractor_core(utp, given=[], outputs=[:b])
 
 # ╔═╡ Cell order:
 # ╠═64f6372a-eff1-11ec-2395-31d68eda5f3a

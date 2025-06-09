@@ -191,7 +191,7 @@ macro nb_extract(utp, template)
 		module_sym
 	)
 
-	# `nb_extractor_body` needs to know about the real notebook
+	# `nb_extractor_core` needs to know about the real notebook
 	# so the following can only be done at runtime.
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
@@ -208,7 +208,7 @@ macro nb_extract(utp, template)
 			# Now can use the utp of the module
 			# (more complete thanks to the macroexpansion,
 			#  that succeeds because the packages are available inside the module)
-			types_expr, fun_expr = nb_extractor_body(
+			types_expr, fun_expr = nb_extractor_core(
 				m.utp,
 				$(QuoteNode(template_dict)),
 				$(QuoteNode(given_symbols)),
@@ -456,7 +456,7 @@ function split_destinations(
 end
 
 # ╔═╡ 58780697-0b89-420c-8b22-a31705ce45e4
-function nb_extractor_body(
+function nb_extractor_core(
 	utp,
 	template_dict::Dict,
 	given_symbols,
