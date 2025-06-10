@@ -25,6 +25,7 @@ Parameters = "0.12"
 Pluto = "0.20"
 PlutoDependencyExplorer = "1"
 PlutoTest = "0.2"
+PlutoUI = "0.7"
 Revise = "3"
 julia = "1.10, 1.11"
 
