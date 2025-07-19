@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.10
+# v0.20.13
 
 #> [frontmatter]
 #> title = ""
@@ -455,6 +455,17 @@ function split_destinations(
 	needed_cells, destinations
 end
 
+# ╔═╡ 56254f07-abe3-4161-871a-f008db14a67a
+function tweak_expression(ex, destination::Symbol)
+	@assert destination in (:module, :function)
+	if destination == :module
+		if MacroTools.isexpr(ex, :(=))
+			ex = Expr(:const, ex)
+		end
+	end
+	ex
+end
+
 # ╔═╡ 58780697-0b89-420c-8b22-a31705ce45e4
 function nb_extractor_core(
 	utp,
@@ -483,9 +494,10 @@ function nb_extractor_core(
 		code_expr = Meta.parse(code_str)
 		check_safe_bind(code_expr, given_symbols)
 		# if not :function, than can be in the module toplevel by default
-		destination = get(destinations, cell, :default)
+		destination = get(destinations, cell, :module)
 		expressions = destination === :function ? body.args : module_expressions
-		push!(expressions, code_expr)
+		tweaked_expr = tweak_expression(code_expr, destination)
+		push!(expressions, tweaked_expr)
 	end
 	# get rid of const (not allowed in function body)
 	body = MacroTools.postwalk(body) do x
@@ -539,4 +551,5 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
 # ╠═d2c81f1c-2756-4877-809f-5cc7b827ce9d
 # ╠═aaa4c1e6-bf01-4843-a168-1bd8b252f749
+# ╠═56254f07-abe3-4161-871a-f008db14a67a
 # ╠═20548484-991e-4b15-b6c5-8ea6b0bf69cb
