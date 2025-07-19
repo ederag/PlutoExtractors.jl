@@ -461,6 +461,8 @@ function tweak_expression(ex, destination::Symbol)
 	if destination == :module
 		if MacroTools.isexpr(ex, :(=))
 			ex = Expr(:const, ex)
+		elseif MacroTools.isexpr(ex, :block)
+			ex.args .= tweak_expression.(ex.args, destination)
 		end
 	else
 		# get rid of const (not allowed in function body)
