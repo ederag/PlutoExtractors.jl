@@ -462,6 +462,11 @@ function tweak_expression(ex, destination::Symbol)
 		if MacroTools.isexpr(ex, :(=))
 			ex = Expr(:const, ex)
 		end
+	else
+		# get rid of const (not allowed in function body)
+		ex = MacroTools.postwalk(ex) do x
+			MacroTools.isexpr(x, :const) ? only(x.args) : x
+		end
 	end
 	ex
 end
@@ -498,10 +503,6 @@ function nb_extractor_core(
 		expressions = destination === :function ? body.args : module_expressions
 		tweaked_expr = tweak_expression(code_expr, destination)
 		push!(expressions, tweaked_expr)
-	end
-	# get rid of const (not allowed in function body)
-	body = MacroTools.postwalk(body) do x
-		MacroTools.isexpr(x, :const) ? only(x.args) : x
 	end
 
 	append!(body.args, template_body.args)
