@@ -197,7 +197,10 @@ macro nb_extract(utp, template)
 	return quote
 		let
 			# utp is not complete yet, but enough to gather the module header
-			header_expressions = collect_header_expressions($(esc(utp)), $(QuoteNode(given_symbols)))
+			header_expressions = collect_header_expressions(
+				$(esc(utp)),
+				$(QuoteNode(given_symbols))
+			)
 			module_expr = get_module_expr(
 				$(QuoteNode(module_sym)),
 				$(esc(utp)),
