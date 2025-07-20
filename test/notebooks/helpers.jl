@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.10
+# v0.20.13
 
 using Markdown
 using InteractiveUtils
@@ -21,6 +21,9 @@ using MacroTools
 
 # ╔═╡ 640d5a61-0e23-4614-96d7-6d79e015eee3
 using PlutoExtractors
+
+# ╔═╡ 9d8610c8-23d0-4ab8-bd8a-2dbe8548cf18
+using PlutoExtractors: rm_all_lines
 
 # ╔═╡ 9f58ade4-c81b-45fb-a497-4f7503b94e13
 import PlutoTest
@@ -106,11 +109,28 @@ needed_cells = PlutoExtractors.all_needed_cells(
 # ╔═╡ 6f71127e-a15c-4ec9-a6b7-d7016d52e390
 PlutoTest.@test is_sorted_in(needed_cells, tpo)
 
+# ╔═╡ 2a48c478-9906-4e4b-9487-03f80459ac9d
+PlutoTest.@test PlutoExtractors.tweak_expression(
+	:(
+		begin
+			a = 1
+			b = 2
+		end
+	),
+	:module
+) |> rm_all_lines == :(
+	begin
+		const a = 1
+		const b = 2
+	end
+) |> rm_all_lines
+
 # ╔═╡ Cell order:
 # ╠═51df9d39-7d35-49e1-bac3-7354882bb141
 # ╠═67aa154f-a294-41ce-aea5-36cf5ddcf1de
 # ╠═acaf0efa-c78f-469a-b5dd-4a2c6f3cbabf
 # ╠═640d5a61-0e23-4614-96d7-6d79e015eee3
+# ╠═9d8610c8-23d0-4ab8-bd8a-2dbe8548cf18
 # ╠═9f58ade4-c81b-45fb-a497-4f7503b94e13
 # ╠═a9193549-5d53-4d13-b0c5-3648c9357afe
 # ╠═88334e90-1486-40e2-84d5-8f49eda045fe
@@ -130,3 +150,4 @@ PlutoTest.@test is_sorted_in(needed_cells, tpo)
 # ╠═bc7ebc67-cb09-4043-9ba1-d5786b183cd3
 # ╠═1f903163-f9f1-4d11-a57f-d67c88970d1c
 # ╠═6f71127e-a15c-4ec9-a6b7-d7016d52e390
+# ╠═2a48c478-9906-4e4b-9487-03f80459ac9d
