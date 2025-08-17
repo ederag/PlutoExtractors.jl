@@ -89,7 +89,7 @@ expected_fun_wrapper_expr = PlutoExtractors.rm_all_lines(
 PlutoTest.@test fun_wrapper_expr == expected_fun_wrapper_expr
 
 # ╔═╡ 94b0b7e1-0a51-4cbd-92a1-ca8db5721312
-header_expr = PlutoExtractors.collect_header_expressions(utp, [])
+header_expr = PlutoExtractors.collect_header_expressions(utp)
 
 # ╔═╡ fb850d61-5795-4424-bcd2-7ae811d98c92
 tpo = PDE.topological_order(utp)
