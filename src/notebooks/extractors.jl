@@ -242,11 +242,11 @@ macro nb_extract(utp, template)
 			# utp is not complete yet, but enough to gather the module header
 			# Note: @load_full_topology can't be used here
 			# (might not be defined in the caller scope)
-			module_expr = get_topology_module_expr(
+			topology_module_expr = get_topology_module_expr(
 				$(QuoteNode(module_sym)),
 				$(esc(utp))
 			)
-			m = $__module__.eval(module_expr)
+			m = $__module__.eval(topology_module_expr)
 
 			# Now can use the utp of the module
 			# (more complete thanks to the macroexpansion,
@@ -277,6 +277,27 @@ function get_topology_module_expr(module_sym, nb_path)
 	basic_utp = load_updated_topology(nb_path)
 	# utp is not complete yet, but enough to gather the module header
 	get_topology_module_expr(module_sym, basic_utp)
+end
+
+# ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
+function get_topology_module_expr(
+	module_name::Symbol,
+	topology,
+	header_expressions
+)
+	Expr(
+		:toplevel,
+		:(
+			module $(module_name)
+				using PlutoExtractors
+				$(header_expressions...)
+				utp = PlutoExtractors.update_with_macroexpand(
+					$(module_name),
+					$(topology)
+				)
+			end
+		)
+	)
 end
 
 # ╔═╡ 7fe4dc9a-9821-4924-bacb-0cebae1e74bd
@@ -331,27 +352,10 @@ function collect_header_expressions(utp)
 	expressions
 end
 
-# ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
-function get_module_expr(module_name::Symbol, topology, header_expressions)
-	Expr(
-		:toplevel,
-		:(
-			module $(module_name)
-				using PlutoExtractors
-				$(header_expressions...)
-				utp = PlutoExtractors.update_with_macroexpand(
-					$(module_name),
-					$(topology)
-				)
-			end
-		)
-	)
-end
-
 # ╔═╡ 8dbffbe1-e925-4b18-b489-82e3ce03d206
 function get_topology_module_expr(module_sym, basic_utp::PDE.NotebookTopology)
 	header_expressions = collect_header_expressions(basic_utp)
-	module_expr = get_module_expr(
+	module_expr = get_topology_module_expr(
 		module_sym,
 		basic_utp,
 		header_expressions,
@@ -603,9 +607,9 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═feadac3a-859c-4915-bfc6-8fa607d6b606
 # ╠═36b59204-dada-4ad3-97f3-2aa2fdfc2617
 # ╠═8dbffbe1-e925-4b18-b489-82e3ce03d206
+# ╠═9194537f-8d42-422b-afa2-f86933522efc
 # ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
 # ╠═7fe4dc9a-9821-4924-bacb-0cebae1e74bd
-# ╠═9194537f-8d42-422b-afa2-f86933522efc
 # ╠═8b28bd70-e4d9-4b21-990b-0f072e6a8802
 # ╠═58780697-0b89-420c-8b22-a31705ce45e4
 # ╠═89abc58d-366a-484e-a723-f20a364574d4
