@@ -42,6 +42,49 @@ import ExpressionExplorer as EE
 # ╔═╡ 4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 import PlutoDependencyExplorer as PDE
 
+# ╔═╡ c11b92b5-69d3-4684-a588-2c00313e66f5
+# Adapted from https://github.com/trixi-framework/Trixi.jl/blob/214cb71175a53e2bddc38709f98d2e074bc2d1fe/test/test_trixi.jl#L18
+# Get the first value assigned to `keyword` in `args` and return `default_value`
+# if there are no assignments to `keyword` in `args`.
+# No check, and does not work with a semicolon
+# => don't advertize it (it's only for internal use)
+function get_kwarg(args, keyword, default_value)
+    for arg in args
+        if arg.head == :(=) && arg.args[1] == keyword
+            return arg.args[2]
+        end
+    end
+    default_value
+end
+
+# ╔═╡ 5808982b-c1ef-4371-b72b-5eec85b3381b
+# Not stabilized yet, so only for internal debugging
+macro load_full_topology(nb_path, args...)
+	return_module = get_kwarg(args, :return_module, false)
+	# will put the full topology creation inside a module,
+	# so that the necessary packages are accessible
+	# for the macroexpansion phase (to determine dependencies)
+	module_sym = gensym(:TopologyModule)
+
+	# The necessary packages are available in the caller project, not here
+	# => Need a macro.
+	# Just prepare the expressions to be evaluated when the macro is executed.
+	return quote
+		let
+			module_expr = get_topology_module_expr(
+				$(QuoteNode(module_sym)),
+				$(esc(nb_path))
+			)
+			m = $__module__.eval(module_expr)
+			if $(esc(return_module))
+				m.utp, m
+			else
+				m.utp
+			end
+		end
+	end
+end
+
 # ╔═╡ c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
 function load_nb_with_topology(path::AbstractString)
 	throw("Dropped in v0.2.0. Please use `load_updated_topology` instead")
@@ -197,11 +240,11 @@ macro nb_extract(utp, template)
 	return quote
 		let
 			# utp is not complete yet, but enough to gather the module header
-			header_expressions = collect_header_expressions($(esc(utp)))
-			module_expr = get_module_expr(
+			# Note: @load_full_topology can't be used here
+			# (might not be defined in the caller scope)
+			module_expr = get_topology_module_expr(
 				$(QuoteNode(module_sym)),
-				$(esc(utp)),
-				header_expressions,
+				$(esc(utp))
 			)
 			m = $__module__.eval(module_expr)
 
@@ -228,6 +271,13 @@ macro nb_extract(utp, template)
 	end
 end
 
+
+# ╔═╡ 36b59204-dada-4ad3-97f3-2aa2fdfc2617
+function get_topology_module_expr(module_sym, nb_path)
+	basic_utp = load_updated_topology(nb_path)
+	# utp is not complete yet, but enough to gather the module header
+	get_topology_module_expr(module_sym, basic_utp)
+end
 
 # ╔═╡ 7fe4dc9a-9821-4924-bacb-0cebae1e74bd
 function fake_bind_expr()
@@ -295,6 +345,16 @@ function get_module_expr(module_name::Symbol, topology, header_expressions)
 				)
 			end
 		)
+	)
+end
+
+# ╔═╡ 8dbffbe1-e925-4b18-b489-82e3ce03d206
+function get_topology_module_expr(module_sym, basic_utp::PDE.NotebookTopology)
+	header_expressions = collect_header_expressions(basic_utp)
+	module_expr = get_module_expr(
+		module_sym,
+		basic_utp,
+		header_expressions,
 	)
 end
 
@@ -532,6 +592,8 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═83dbf999-dfdf-43c8-882b-f11e17e09a3a
 # ╠═4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 # ╠═8037bbf1-fae0-47a3-a768-a089f21349a8
+# ╠═5808982b-c1ef-4371-b72b-5eec85b3381b
+# ╠═c11b92b5-69d3-4684-a588-2c00313e66f5
 # ╠═c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
 # ╠═7e8a7524-1ae6-439d-98c6-5b2390014096
 # ╠═c2f701da-aaa7-4af5-bada-5acb05465b3f
@@ -539,6 +601,8 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═5c15516e-e3e1-401b-97b5-f4ce60e3a234
 # ╠═ba256080-73fb-4de4-be72-101318c82029
 # ╠═feadac3a-859c-4915-bfc6-8fa607d6b606
+# ╠═36b59204-dada-4ad3-97f3-2aa2fdfc2617
+# ╠═8dbffbe1-e925-4b18-b489-82e3ce03d206
 # ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
 # ╠═7fe4dc9a-9821-4924-bacb-0cebae1e74bd
 # ╠═9194537f-8d42-422b-afa2-f86933522efc
