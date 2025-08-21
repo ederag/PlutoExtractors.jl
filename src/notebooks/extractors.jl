@@ -218,11 +218,14 @@ julia> fun(2)
 See also [`load_updated_topology`](@ref)
 """
 macro nb_extract(utp, template)
-	# will put the function definition inside a module,
-	# so that the necessary packages are accessible
-	# both for the macroexpansion phase (to determine dependencies)
-	# and for the function
-	module_sym = gensym(:PlutoExtract)
+	# A module where all the packages are accessible
+	# for the macroexpansion phase (to determine dependencies),
+	# that will hold a more complete topology
+	topology_module_sym = gensym(:ExtractorTopology)
+	
+	# The function definition has its own module,
+	# with the necessary packages
+	function_module_sym = gensym(:ExtractorFunction)
 
 	(template_dict, given_symbols, needed_symbols) = template_analysis(template)
 
@@ -231,7 +234,7 @@ macro nb_extract(utp, template)
 	# to be evaluated in the local scope rather than in toplevel
 	fun_wrapper_expr = fun_wrapper(
 		template_dict,
-		module_sym
+		function_module_sym
 	)
 
 	# `nb_extractor_core` needs to know about the real notebook
@@ -243,34 +246,27 @@ macro nb_extract(utp, template)
 			# Note: @load_full_topology can't be used here
 			# (might not be defined in the caller scope)
 			topology_module_expr = get_topology_module_expr(
-				$(QuoteNode(module_sym)),
+				$(QuoteNode(topology_module_sym)),
 				$(esc(utp))
 			)
-			m = $__module__.eval(topology_module_expr)
+			tpm = $__module__.eval(topology_module_expr)
 
 			# Now can use the utp of the module
 			# (more complete thanks to the macroexpansion,
 			#  that succeeds because the packages are available inside the module)
-			types_expr, fun_expr = nb_extractor_core(
-				m.utp,
+			function_module_expr = get_function_module_expr(
+				$(QuoteNode(function_module_sym)),
+				tpm.utp,
 				$(QuoteNode(template_dict)),
 				$(QuoteNode(given_symbols)),
 				$(QuoteNode(needed_symbols))
 			)
-
-			# Put in the module the "types" expressions (`struct` for instance)
-			# (not allowed in the function)
-			for expr in types_expr
-				Base.eval(m, expr)
-			end
-
-			Base.eval(m, fun_expr)
+			fnm = $__module__.eval(function_module_expr)
 		end
 		# This last expression will be evaluated in the caller's scope
 		$(esc(fun_wrapper_expr))
 	end
 end
-
 
 # ╔═╡ 36b59204-dada-4ad3-97f3-2aa2fdfc2617
 function get_topology_module_expr(module_sym, nb_path)
@@ -579,6 +575,38 @@ function nb_extractor_core(
 	return module_expressions, fun_expr
 end
 
+# ╔═╡ 8adb0164-51b7-4ac3-a4cc-cea3c8f2dada
+function get_function_module_expr(
+	module_name::Symbol,
+	topology::PDE.NotebookTopology,
+	template_dict,
+	given_symbols,
+	needed_symbols,
+)
+	# For now get all the usings_imports statements (same as the utp module),
+	# but the goal is to replace this with the needed cells code
+	header_expressions = collect_header_expressions(topology)
+	
+	types_expr, fun_expr = nb_extractor_core(
+		topology,
+		template_dict,
+		given_symbols,
+		needed_symbols,
+	)
+	
+	Expr(
+		:toplevel,
+		:(
+			module $(module_name)
+				using PlutoExtractors  # is it needed ?
+				$(header_expressions...)
+				$(types_expr...)
+				$(fun_expr)
+			end
+		)
+	)
+end
+
 # ╔═╡ 20548484-991e-4b15-b6c5-8ea6b0bf69cb
 """
     rm_all_lines(ex)
@@ -608,6 +636,7 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═36b59204-dada-4ad3-97f3-2aa2fdfc2617
 # ╠═8dbffbe1-e925-4b18-b489-82e3ce03d206
 # ╠═9194537f-8d42-422b-afa2-f86933522efc
+# ╠═8adb0164-51b7-4ac3-a4cc-cea3c8f2dada
 # ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
 # ╠═7fe4dc9a-9821-4924-bacb-0cebae1e74bd
 # ╠═8b28bd70-e4d9-4b21-990b-0f072e6a8802
