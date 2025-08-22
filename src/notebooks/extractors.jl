@@ -42,6 +42,9 @@ import ExpressionExplorer as EE
 # ╔═╡ 4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 import PlutoDependencyExplorer as PDE
 
+# ╔═╡ 65e7c0f8-0941-43ea-bb04-fe12ea4554a2
+EEE = PDE.ExpressionExplorerExtras
+
 # ╔═╡ c11b92b5-69d3-4684-a588-2c00313e66f5
 # Adapted from https://github.com/trixi-framework/Trixi.jl/blob/214cb71175a53e2bddc38709f98d2e074bc2d1fe/test/test_trixi.jl#L18
 # Get the first value assigned to `keyword` in `args` and return `default_value`
@@ -287,13 +290,47 @@ function get_topology_module_expr(
 			module $(module_name)
 				using PlutoExtractors
 				$(header_expressions...)
-				utp = PlutoExtractors.update_with_macroexpand(
+				macro_utp = PlutoExtractors.update_with_macroexpand(
 					$(module_name),
 					$(topology)
 				)
+				soft_utp = PlutoExtractors.add_soft_definitions(
+					macro_utp,
+					$(module_name)
+				)
+				utp = soft_utp
 			end
 		)
 	)
+end
+
+# ╔═╡ 89eb13ae-cb89-425e-9075-63bcb2056f50
+"""
+    add_soft_definitions(topology, mod)
+
+Return a copy of the `topology` with the nodes `soft_definitions` populated.
+The soft definitions are names exported by a module during a `using` statement.
+`mod` is a module such as the "topology module", where all the necessary packages are already "used".
+"""
+function add_soft_definitions(topology, mod)
+	old_nodes = topology.nodes
+	new_nodes = empty(topology.nodes)
+	for (cell, node) in pairs(old_nodes)
+		uis = topology.codes[cell].module_usings_imports
+		implicit_usings = EEE.collect_implicit_usings(uis)
+		if !isempty(implicit_usings)
+			soft_definitions = Pluto.PlutoRunner.collect_soft_definitions(
+				mod,
+				implicit_usings
+			)
+			topology = Pluto.with_new_soft_definitions(
+				topology,
+				cell,
+				soft_definitions
+			)
+		end
+	end
+	topology
 end
 
 # ╔═╡ 7fe4dc9a-9821-4924-bacb-0cebae1e74bd
@@ -624,6 +661,7 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═83dbf999-dfdf-43c8-882b-f11e17e09a3a
 # ╠═4b54ac81-1dd1-45ad-b8f6-e2cddf7092c9
 # ╠═8037bbf1-fae0-47a3-a768-a089f21349a8
+# ╠═65e7c0f8-0941-43ea-bb04-fe12ea4554a2
 # ╠═5808982b-c1ef-4371-b72b-5eec85b3381b
 # ╠═c11b92b5-69d3-4684-a588-2c00313e66f5
 # ╠═c196fae5-1d7c-4f73-af01-d9a8c21ac5bd
@@ -636,6 +674,7 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═36b59204-dada-4ad3-97f3-2aa2fdfc2617
 # ╠═8dbffbe1-e925-4b18-b489-82e3ce03d206
 # ╠═9194537f-8d42-422b-afa2-f86933522efc
+# ╠═89eb13ae-cb89-425e-9075-63bcb2056f50
 # ╠═8adb0164-51b7-4ac3-a4cc-cea3c8f2dada
 # ╠═56764600-5efa-45bd-bf9e-68dae3bde72c
 # ╠═7fe4dc9a-9821-4924-bacb-0cebae1e74bd
