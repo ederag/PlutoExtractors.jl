@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.13
 
 using Markdown
 using InteractiveUtils
@@ -85,6 +85,25 @@ expected_v1_v2_out_d_indirect = dot(v1, v2)
 # ╔═╡ 03542919-9804-485d-9be1-418ad3e88ac3
 PlutoTest.@test fun_v1_v2_out_d_indirect(v1, v2) == expected_v1_v2_out_d_indirect
 
+# ╔═╡ cc1cfa88-90d7-4445-8064-bf4b71456d4d
+md"""
+## Soft definitions
+"""
+
+# ╔═╡ 32721171-d229-46b8-89ce-c737adc352af
+@nb_extract(
+	utp,
+	function fun_options_dict(option_a, option_b)
+		return options_dict
+	end
+)
+
+# ╔═╡ 1c34c068-4572-4e8c-be97-b5ba00030af1
+options_dict = fun_options_dict(2.0, 3.0)
+
+# ╔═╡ e024bab4-0bf9-4bb2-8128-70e7b534c1da
+PlutoTest.@test options_dict[:a] == 2.0 && options_dict[:b] == 3.0
+
 # ╔═╡ Cell order:
 # ╠═51df9d39-7d35-49e1-bac3-7354882bb141
 # ╠═67aa154f-a294-41ce-aea5-36cf5ddcf1de
@@ -107,3 +126,7 @@ PlutoTest.@test fun_v1_v2_out_d_indirect(v1, v2) == expected_v1_v2_out_d_indirec
 # ╠═24f70698-dd49-49e4-822b-92f6dfe2d026
 # ╠═83f08626-cd31-45b1-8b4e-dba7c40e4bf2
 # ╠═03542919-9804-485d-9be1-418ad3e88ac3
+# ╠═cc1cfa88-90d7-4445-8064-bf4b71456d4d
+# ╠═32721171-d229-46b8-89ce-c737adc352af
+# ╠═1c34c068-4572-4e8c-be97-b5ba00030af1
+# ╠═e024bab4-0bf9-4bb2-8128-70e7b534c1da
