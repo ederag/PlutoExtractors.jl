@@ -27,6 +27,10 @@ server_session.connected_clients[fakeclient.id] = fakeclient
 		include("notebooks/helpers.jl")
 	end
 
+	@testset "Full topology" begin
+		include("notebooks/full_topology.jl")
+	end
+
 	@testset "Extract from source_basic.jl" begin
 		include("notebooks/extract_from_source_basic.jl")
 	end
