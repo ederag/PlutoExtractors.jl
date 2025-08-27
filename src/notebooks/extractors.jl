@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.13
+# v0.20.17
 
 #> [frontmatter]
 #> title = ""
@@ -220,7 +220,7 @@ julia> fun(2)
 
 See also [`load_updated_topology`](@ref)
 """
-macro nb_extract(utp, template)
+macro nb_extract(source_path, template)
 	# A module where all the packages are accessible
 	# for the macroexpansion phase (to determine dependencies),
 	# that will hold a more complete topology
@@ -245,12 +245,13 @@ macro nb_extract(utp, template)
 	# => Just prepare the expressions to be evaluated when the macro is executed.
 	return quote
 		let
+			basic_utp = load_updated_topology($(esc(source_path)))
 			# utp is not complete yet, but enough to gather the module header
 			# Note: @load_full_topology can't be used here
 			# (might not be defined in the caller scope)
 			topology_module_expr = get_topology_module_expr(
 				$(QuoteNode(topology_module_sym)),
-				$(esc(utp))
+				basic_utp
 			)
 			tpm = $__module__.eval(topology_module_expr)
 

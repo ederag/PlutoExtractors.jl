@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.13
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -23,7 +23,7 @@ import PlutoTest
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_usings.jl")
+source_path = joinpath(root_dir, "test", "notebooks", "source_usings.jl")
 
 # ╔═╡ 8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 md"""
@@ -41,7 +41,7 @@ md"""
 PlutoTest.@test !@isdefined Parameters
 
 # ╔═╡ 987fd80c-a884-4828-8c5d-96c92d5f099a
-utp = PlutoExtractors.@load_full_topology(source_nb_file)
+utp = PlutoExtractors.@load_full_topology(source_path)
 
 # ╔═╡ efc5cf0b-20ff-4f1c-a99e-d9280959dba1
 cell = filter(utp.cell_order) do cell

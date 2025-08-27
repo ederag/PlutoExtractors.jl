@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -26,7 +26,7 @@ import PlutoTest
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ 818ce446-5aaf-4b71-8068-bf26b86a61f9
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_consts.jl")
+source_path = joinpath(root_dir, "test", "notebooks", "source_consts.jl")
 
 # ╔═╡ 6cd98e90-6332-4fad-b57c-3868a4ce7479
 md"""
@@ -36,12 +36,9 @@ md"""
 # ╔═╡ 77e340fc-40d7-48d6-b220-da20dac99572
 md"## Just one variable"
 
-# ╔═╡ a946286a-cef8-49e3-a98c-f87721f3d80d
-utp = load_updated_topology(source_nb_file)
-
 # ╔═╡ f064422c-b72a-4450-844f-4cb7172bd753
 @nb_extract(
-	utp,
+	source_path,
 	function fun_out_a()
 		return a
 	end
@@ -62,7 +59,6 @@ PlutoTest.@test fun_out_a() == 1
 # ╠═818ce446-5aaf-4b71-8068-bf26b86a61f9
 # ╠═6cd98e90-6332-4fad-b57c-3868a4ce7479
 # ╠═77e340fc-40d7-48d6-b220-da20dac99572
-# ╠═a946286a-cef8-49e3-a98c-f87721f3d80d
 # ╠═f064422c-b72a-4450-844f-4cb7172bd753
 # ╠═37043d8c-e840-4043-8375-dc1083f5aa89
 # ╠═295c54c2-7697-43cb-a474-634ff6523a60

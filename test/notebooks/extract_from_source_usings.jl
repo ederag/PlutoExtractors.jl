@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.13
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -29,7 +29,7 @@ import PlutoTest
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_usings.jl")
+source_path = joinpath(root_dir, "test", "notebooks", "source_usings.jl")
 
 # ╔═╡ 8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 md"""
@@ -40,11 +40,11 @@ md"""
 md"## Just one variable"
 
 # ╔═╡ f3ee4c34-3c96-4254-aa07-34d67efaedc3
-utp = load_updated_topology(source_nb_file)
+# utp = load_updated_topology(source_path)
 
 # ╔═╡ 525f5fcc-efd1-48ef-8aeb-9c184e54a50d
 @nb_extract(
-	utp,
+	source_path,
 	function fun_out_d_direct()
 		return d_direct
 	end
@@ -64,7 +64,7 @@ md"## Indirect with two inputs"
 
 # ╔═╡ 75b6aae9-e013-4b6c-ac88-721e77822c97
 @nb_extract(
-	utp,
+	source_path,
 	function fun_v1_v2_out_d_indirect(v1, v2)
 		return d_indirect
 	end
@@ -92,7 +92,7 @@ md"""
 
 # ╔═╡ 32721171-d229-46b8-89ce-c737adc352af
 @nb_extract(
-	utp,
+	source_path,
 	function fun_options_dict(option_a, option_b)
 		return options_dict
 	end

@@ -4,28 +4,24 @@
 
 ## Feature
 
-    @nb_extract(utp, template)
+    @nb_extract(source_path, template)
 
-Create a function out of a `Pluto` notebook updated topology,
-based on a template.
+Create a function out of a `Pluto` notebook,
+based on a `template`.
 
-The notebook updated topology `utp` is obtained
-from [`load_updated_topology`](@ref).
-This is a shallow first pass that will help determine the required packages.
+The source notebook path is given as `source_path`.
 
 The signature of the returned function is exactly the one of the `template`.
 The arguments take precedence over the values defined in the notebook.
 
-A second pass performed on `utp` and the template are then analyzed
-to find the cells that are necessary to evaluate the template body
+The notebook topology and the template are then analyzed
+to find the cells needed to evaluate the template body
 (the cells that define `b` and `c` in the example below).
-
-Those cells code is prepended to the template body,
-to complete the function body.
+Note: the template body ends up at the _end_ of the function.
 
 The result of the macro is this fleshed-out function,
 just as if it had been typed by hand.
-Preliminary benchmarks show no overhead.
+Preliminary benchmarks show no runtime overhead.
 
 Remark: `@nb_extract` can be used not only from a running Pluto notebook,
 but from anywhere else (a script, the REPL, ...).
@@ -33,14 +29,15 @@ but from anywhere else (a script, the REPL, ...).
 # Example
 Say in the source notebook there are three cells: `a = 1`, `b = 2a`, `c = 2b`,
 here is how to make a function that return the value `c` from any given `a`:
-```jldoctest
+```julia-repl
 julia> using PlutoExtractors
+
 julia> source_path = pkgdir(PlutoExtractors,
 	"test", "notebooks", "source_basic.jl"
 )  # to be replaced with the path of your source notebook
-julia> utp = load_updated_topology(source_path);
+
 julia> @nb_extract(
-	utp,
+	source_path,
 	function fun(a)
 		return c
 	end
@@ -49,7 +46,7 @@ julia> fun(2)
 8
 ```
 
-More examples can be found in the test/notebooks/extract_from_*.jl Pluto notebooks.
+More examples can be found in the `test/notebooks/extract_from_*.jl` Pluto notebooks.
 
 # About packages management
 
@@ -62,7 +59,7 @@ This ensures that both source and destination share exactly the same packages ve
 In principle `@nb_extract` may be used with the standard Pluto package system, but then
 1) The necessary `using` statements _must_ be copied manually to the destination notebook
    (otherwise they would be missing from the notebook project)
-2) Something that used to work in the source _might_ fail in the destination just because packages versions differ.
+2) Something that used to work in the source _might_ fail in the destination just because package versions differ.
 
 ## Status
 
@@ -70,10 +67,31 @@ This package is in alpha stage.
 It works well here, but no doubt bugs will come up when used by others,
 please file issues !
 
+## How it works
+
+The source notebook is analyzed to find all the `using` and `import` statements.
+A module is created with all these statements.
+This module has enough information to evaluate and hold
+a fully updated topology of the source notebook (including macroexpansions).
+This is the "topology module".
+
+For flexibility another module is created (the "function module"),
+to hold the function and all the necessary code.
+Thanks to the full topology created above, the needed cells are found,
+and split in two groups:
+- If the cell depends on any template argument, then its code goes inside the function.
+This code will run upon every function call.
+- Otherwise its code is needed but kind of static, so it goes to the "function module" toplevel.
+(with some `const` prepended for performance, where relevant). This code runs only once.
+
+In the caller scope a wrapper with exactly the template signature is evaluated,
+that calls the function defined in the "function module".
+
+
 ## Acknowledgments
 
-Most of the work is done by
-[Pluto.jl](https://github.com/fonsp/Pluto.jl) for the notebook loading,
+Most of the work is done by [Pluto.jl](https://github.com/fonsp/Pluto.jl) for the notebook loading,
 as well as [ExpressionExplorer.jl](https://github.com/JuliaPluto/ExpressionExplorer.jl),
 [PlutoDependencyExplorer.jl](https://github.com/JuliaPluto/PlutoDependencyExplorer.jl)
-and [MacroTools.jl](https://github.com/FluxML/MacroTools.jl) for the analysis.
+and [MacroTools.jl](https://github.com/FluxML/MacroTools.jl)
+for the analysis.

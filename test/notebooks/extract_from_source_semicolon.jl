@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -32,7 +32,7 @@ EEE = PDE.ExpressionExplorerExtras
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ 35bab28c-477c-43dd-b339-13cfdbf2f33e
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_semicolon.jl")
+source_path = joinpath(root_dir, "test", "notebooks", "source_semicolon.jl")
 
 # ╔═╡ 89dd6ff4-2495-4bd1-96ef-8962f8041cf3
 md"""
@@ -43,11 +43,11 @@ md"""
 md"## Just one variable"
 
 # ╔═╡ b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
-utp = load_updated_topology(source_nb_file)
+utp = load_updated_topology(source_path)
 
 # ╔═╡ a8ac792a-d83b-48ea-a98b-79c43ef76c2e
 @nb_extract(
-	utp,
+	source_path,
 	function fun1()
 		return b
 	end
@@ -86,8 +86,23 @@ b_code = utp.codes[b_cell]
 # ╔═╡ af63b9bf-9deb-43c9-b9ae-65a74e7fe8e7
 EEE.pretransform_pluto(b_code.parsedcode)
 
+# ╔═╡ c8f43541-6a3d-4980-a6bd-0fef63041fca
+template = :(
+	function fun1()
+		return b
+	end
+)
+
+# ╔═╡ ac91075f-0a6c-4eae-9a95-e33795e6696d
+(template_dict, given_symbols, needed_symbols) = PlutoExtractors.template_analysis(template)
+
 # ╔═╡ 1d54eab5-af3a-400d-90d8-97be0cffe35b
-PlutoExtractors.nb_extractor_core(utp, given=[], outputs=[:b])
+PlutoExtractors.nb_extractor_core(
+	utp,
+	template_dict,
+	given_symbols,
+	needed_symbols
+)
 
 # ╔═╡ Cell order:
 # ╠═64f6372a-eff1-11ec-2395-31d68eda5f3a
@@ -111,4 +126,6 @@ PlutoExtractors.nb_extractor_core(utp, given=[], outputs=[:b])
 # ╠═d118c09b-d70f-4f24-be30-122a3c18abd6
 # ╠═30f9606c-134c-4717-82d4-9b6b031116bb
 # ╠═af63b9bf-9deb-43c9-b9ae-65a74e7fe8e7
+# ╠═c8f43541-6a3d-4980-a6bd-0fef63041fca
+# ╠═ac91075f-0a6c-4eae-9a95-e33795e6696d
 # ╠═1d54eab5-af3a-400d-90d8-97be0cffe35b

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -26,7 +26,7 @@ import PlutoTest
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ 35bab28c-477c-43dd-b339-13cfdbf2f33e
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_basic.jl")
+source_path = joinpath(root_dir, "test", "notebooks", "source_basic.jl")
 
 # ╔═╡ 89dd6ff4-2495-4bd1-96ef-8962f8041cf3
 md"""
@@ -36,12 +36,9 @@ md"""
 # ╔═╡ 214a48ea-1769-45c8-b113-bb17a1a766b7
 md"## Just one variable"
 
-# ╔═╡ b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
-utp = load_updated_topology(source_nb_file)
-
 # ╔═╡ a8ac792a-d83b-48ea-a98b-79c43ef76c2e
 @nb_extract(
-	utp,
+	source_path,
 	function fun1()
 		return a
 	end
@@ -60,7 +57,7 @@ md"""
 
 # ╔═╡ aada1eb9-5887-4c4f-a796-45217ff8ece7
 @nb_extract(
-	utp,
+	source_path,
 	function fun_out_nt_a_c()
 		return (; a = a, c = c)
 	end
@@ -79,7 +76,7 @@ md"""
 
 # ╔═╡ abfcb9bd-8c20-47a9-9f1c-12e75426d6df
 @nb_extract(
-	utp,
+	source_path,
 	function fun_a_out_nt_b_c(a)
 		return (; b = b, c = c)
 	end
@@ -98,7 +95,7 @@ md"""
 
 # ╔═╡ 66929e56-fb7f-49fe-a0ce-b4a58b558b37
 @nb_extract(
-	utp,
+	source_path,
 	function fun_6(; a=2)
 		return c
 	end
@@ -118,7 +115,7 @@ md"""
 # ╔═╡ 02e44c02-d427-4646-afdc-b52f1e5a9595
 res_inner = let
 	@nb_extract(
-		utp,
+		source_path,
 		function inner_fun(a)
 			return c
 		end
@@ -139,7 +136,7 @@ md"""
 
 # ╔═╡ 484fb80e-2722-42b9-bb39-6f2cade9b076
 @nb_extract(
-	utp,
+	source_path,
 	function fun_5(a::Int)
 		return c
 	end
@@ -158,7 +155,7 @@ md"""
 
 # ╔═╡ 4366181c-9516-436e-8072-31488d4722ab
 @nb_extract(
-	utp,
+	source_path,
 	function fun_error_1()
 		return non_existing  # :non_existing is not defined in nb
 	end
@@ -176,7 +173,6 @@ PlutoTest.@test_throws UndefVarError(:non_existing) fun_error_1()
 # ╠═35bab28c-477c-43dd-b339-13cfdbf2f33e
 # ╟─89dd6ff4-2495-4bd1-96ef-8962f8041cf3
 # ╟─214a48ea-1769-45c8-b113-bb17a1a766b7
-# ╠═b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
 # ╠═a8ac792a-d83b-48ea-a98b-79c43ef76c2e
 # ╠═b2b5d93a-faff-4d9f-92da-40bf95efcff6
 # ╠═4c009a24-8098-4803-9396-43598e2c382d
