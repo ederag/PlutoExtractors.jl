@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -38,13 +38,7 @@ EEE = PDE.ExpressionExplorerExtras
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_unpack.jl")
-
-# ╔═╡ f3ee4c34-3c96-4254-aa07-34d67efaedc3
-utp = load_updated_topology(source_nb_file)
-
-# ╔═╡ 155b072a-d32f-4062-ad4e-1ab9792614ae
-typeof(utp.codes)
+source_path = joinpath(root_dir, "test", "notebooks", "source_unpack.jl")
 
 # ╔═╡ 8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 md"""
@@ -59,7 +53,7 @@ md"## Regular
 
 # ╔═╡ 21f86448-721a-4ffe-a098-1482071de585
 @nb_extract(
-	utp,
+	source_path,
 	function fun1()
 		return a, c
 	end
@@ -72,6 +66,12 @@ PlutoTest.@test fun1() == (1, 3)
 md"""
 ## Debug
 """
+
+# ╔═╡ f3ee4c34-3c96-4254-aa07-34d67efaedc3
+utp = load_updated_topology(source_path)
+
+# ╔═╡ 155b072a-d32f-4062-ad4e-1ab9792614ae
+typeof(utp.codes)
 
 # ╔═╡ d12b6a5b-1e35-42af-bf89-3959565464ae
 utp.unresolved_cells
@@ -106,13 +106,13 @@ EEE.pretransform_pluto(unpack_ac_code.parsedcode)
 # ╠═6fc87b31-9206-4ccc-87a6-ad37b0d25415
 # ╠═88334e90-1486-40e2-84d5-8f49eda045fe
 # ╠═d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
-# ╠═f3ee4c34-3c96-4254-aa07-34d67efaedc3
-# ╠═155b072a-d32f-4062-ad4e-1ab9792614ae
 # ╠═8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 # ╠═53c808e9-a4bc-4fbc-b186-41532f54e7f8
 # ╠═21f86448-721a-4ffe-a098-1482071de585
 # ╠═737782bb-ea44-41b4-b467-da42793fd616
 # ╠═d3341aee-be88-4f4c-a25b-7f2342a98591
+# ╠═f3ee4c34-3c96-4254-aa07-34d67efaedc3
+# ╠═155b072a-d32f-4062-ad4e-1ab9792614ae
 # ╠═d12b6a5b-1e35-42af-bf89-3959565464ae
 # ╠═198d4900-9ae1-456f-b1cf-3c26a2d8249a
 # ╠═1f19f8ec-46e5-48d7-a557-15db25bc12ff

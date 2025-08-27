@@ -35,7 +35,7 @@ import PlutoDependencyExplorer as PDE
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_types.jl")
+source_path = joinpath(root_dir, "test", "notebooks", "source_types.jl")
 
 # ╔═╡ 8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 md"""
@@ -43,7 +43,7 @@ md"""
 """
 
 # ╔═╡ f3ee4c34-3c96-4254-aa07-34d67efaedc3
-utp = load_updated_topology(source_nb_file)
+utp = load_updated_topology(source_path)
 
 # ╔═╡ e7ea8a83-7b0f-4479-921d-fdc9ac80218a
 template = :(

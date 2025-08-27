@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.13
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -26,7 +26,7 @@ import PlutoTest
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_types.jl")
+source_path = joinpath(root_dir, "test", "notebooks", "source_types.jl")
 
 # ╔═╡ 8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 md"""
@@ -37,9 +37,6 @@ md"""
 md"## Types
 "
 
-# ╔═╡ f3ee4c34-3c96-4254-aa07-34d67efaedc3
-utp = load_updated_topology(source_nb_file)
-
 # ╔═╡ e4837658-a2ef-4dfa-8cb0-f909eac426b6
 md"""
 ### Tests
@@ -47,7 +44,7 @@ md"""
 
 # ╔═╡ 525f5fcc-efd1-48ef-8aeb-9c184e54a50d
 @nb_extract(
-	utp,
+	source_path,
 	function fun_1()
 		return b
 	end
@@ -69,7 +66,7 @@ Sensitive to [Julia#50354](https://github.com/JuliaLang/julia/issues/50354) ?
 # ╔═╡ 919bd4ba-6fe2-4641-b7b7-1c184f97679d
 #  Can't get the module yet, so test inside the function
 @nb_extract(
-	utp,
+	source_path,
 	function fun_2()
 		sup_match = supertype(Point) === AbstractPoint
 		return sup_match
@@ -86,7 +83,7 @@ md"""
 
 # ╔═╡ f87071f9-f1a1-4801-9c38-6f2ccba20e1c
 @nb_extract(
-	utp,
+	source_path,
 	function fun_3(x_1)
 		return res_1_2
 	end
@@ -107,7 +104,6 @@ PlutoTest.@test isnan(fun_3(nothing))
 # ╠═d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
 # ╠═8411b188-54d9-43fd-9d47-6bd6d7f5ed86
 # ╠═53c808e9-a4bc-4fbc-b186-41532f54e7f8
-# ╠═f3ee4c34-3c96-4254-aa07-34d67efaedc3
 # ╠═e4837658-a2ef-4dfa-8cb0-f909eac426b6
 # ╠═525f5fcc-efd1-48ef-8aeb-9c184e54a50d
 # ╠═b8879c23-6aec-435a-a875-e30ebd1b4d5a

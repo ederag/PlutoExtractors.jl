@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -38,7 +38,7 @@ import PlutoTest
 root_dir = pkgdir(PlutoExtractors)
 
 # ╔═╡ 35bab28c-477c-43dd-b339-13cfdbf2f33e
-source_nb_file = joinpath(root_dir, "test", "notebooks", "source_bind.jl")
+source_path = joinpath(root_dir, "test", "notebooks", "source_bind.jl")
 
 # ╔═╡ 89dd6ff4-2495-4bd1-96ef-8962f8041cf3
 md"""
@@ -52,9 +52,6 @@ md"""
 Pluto treats @bind special
 """
 
-# ╔═╡ b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
-utp = load_updated_topology(source_nb_file)
-
 # ╔═╡ 1edaab0a-c3f1-45d0-9be7-ceee605e1a1c
 md"""
 ### Variable needed and not given
@@ -62,7 +59,7 @@ md"""
 
 # ╔═╡ a8ac792a-d83b-48ea-a98b-79c43ef76c2e
 PlutoTest.@test_throws ["Please add `a` to the given arguments"] @nb_extract(
-	utp,
+	source_path,
 	function fun1()
 		return b
 	end
@@ -75,7 +72,7 @@ md"""
 
 # ╔═╡ c23487ba-d2e9-4665-b57f-d661b2d16a25
 @nb_extract(
-	utp,
+	source_path,
 	function fun2(a)
 		return b
 	end
@@ -95,7 +92,7 @@ md"""
 
 # ╔═╡ 193ebf2a-d2d3-4265-890f-6e808a88b907
 @nb_extract(
-	utp,
+	source_path,
 	function fun3()
 		return d
 	end
@@ -112,7 +109,7 @@ aptly error with a meaningful message.
 
 # ╔═╡ 0882779d-e882-4350-a714-49a9558c762c
 PlutoTest.@test_throws ["Please add `xe` to the given arguments"] @nb_extract(
-	utp,
+	source_path,
 	function fun4()
 		return xe
 	end
@@ -127,7 +124,6 @@ PlutoTest.@test_throws ["Please add `xe` to the given arguments"] @nb_extract(
 # ╠═35bab28c-477c-43dd-b339-13cfdbf2f33e
 # ╟─89dd6ff4-2495-4bd1-96ef-8962f8041cf3
 # ╟─214a48ea-1769-45c8-b113-bb17a1a766b7
-# ╠═b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
 # ╟─1edaab0a-c3f1-45d0-9be7-ceee605e1a1c
 # ╠═a8ac792a-d83b-48ea-a98b-79c43ef76c2e
 # ╟─43f28cb1-ac86-49c0-8f9b-87e7cbc1287c

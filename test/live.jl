@@ -2,14 +2,13 @@
 # where server_session is defined
 
 @testset "Basic" begin
-	source_basic_path = pkgdir(PlutoExtractors, "test", "notebooks", "source_basic.jl")
+	source_path = pkgdir(PlutoExtractors, "test", "notebooks", "source_basic.jl")
 
 	# "# expected" cells produce an output that the next cell should reproduce
 	dest_notebook = Pluto.Notebook([
 		Pluto.Cell("""using PlutoExtractors"""),
-		Pluto.Cell("""utp = load_updated_topology("$(source_basic_path)")"""),
 		Pluto.Cell("""
-			@nb_extract(utp, 
+			@nb_extract("$(source_path)", 
 				function fun(a)
 					return c
 				end
@@ -27,6 +26,6 @@
 	cell(idx) = dest_notebook.cells[idx]
 	@test cell(1) |> noerror
 	@test cell(2) |> noerror
-	@test cell(3) |> noerror
-	@test cell(5).output.body == cell(4).output.body
+	#@test cell(3) |> noerror
+	@test cell(4).output.body == cell(3).output.body
 end
