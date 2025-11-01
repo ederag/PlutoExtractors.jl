@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.17
+# v0.20.20
 
 #> [frontmatter]
 #> title = ""
@@ -79,10 +79,11 @@ macro load_full_topology(nb_path, args...)
 				$(esc(nb_path))
 			)
 			m = $__module__.eval(module_expr)
+			utp = @invokelatest(m.utp)
 			if $(esc(return_module))
-				m.utp, m
+				utp, m
 			else
-				m.utp
+				utp
 			end
 		end
 	end
@@ -260,7 +261,7 @@ macro nb_extract(source_path, template)
 			#  that succeeds because the packages are available inside the module)
 			function_module_expr = get_function_module_expr(
 				$(QuoteNode(function_module_sym)),
-				tpm.utp,
+				@invokelatest(tpm.utp),
 				$(QuoteNode(template_dict)),
 				$(QuoteNode(given_symbols)),
 				$(QuoteNode(needed_symbols))

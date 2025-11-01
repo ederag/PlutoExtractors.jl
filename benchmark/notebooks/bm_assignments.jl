@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.13
+# v0.20.20
 
 using Markdown
 using InteractiveUtils
@@ -36,9 +36,6 @@ notebookpath() = replace(@__FILE__, r"#==#.*" => "")
 # Self-sourced, do not create cycles !
 source_nb_file = notebookpath()
 
-# ╔═╡ f3ee4c34-3c96-4254-aa07-34d67efaedc3
-utp = load_updated_topology(source_nb_file)
-
 # ╔═╡ 2a76c938-34a3-4539-9487-c691e16e69f8
 md"""
 # Definitions
@@ -68,7 +65,7 @@ md"""
 
 # ╔═╡ 525f5fcc-efd1-48ef-8aeb-9c184e54a50d
 @nb_extract(
-	utp,
+	source_nb_file,
 	function fun_1(a)
 		return b
 	end
@@ -87,7 +84,7 @@ md"""
 
 # ╔═╡ cf58a703-4215-4fa4-962a-b01ba86042ed
 @nb_extract(
-	utp,
+	source_nb_file,
 	function fun_2(a)
 		return d
 	end
@@ -98,7 +95,7 @@ md"""
 
 # ╔═╡ c0584984-4488-43dd-b2b8-396acabd3aaa
 @nb_extract(
-	utp,
+	source_nb_file,
 	function fun_3(a)
 		return sin(d)
 	end
@@ -111,7 +108,7 @@ md"""
 
 # ╔═╡ 2566d59a-42e5-488d-aa13-8bafaf1ad13d
 @nb_extract(
-	utp,
+	source_nb_file,
 	function fun_4()
 		return sin(d)
 	end
@@ -131,7 +128,6 @@ md"""
 # ╠═88334e90-1486-40e2-84d5-8f49eda045fe
 # ╠═3c63d43c-e2ee-4d18-8755-4809016e0fe4
 # ╠═d5a36c7c-95bf-4bd3-96d7-1b2392eeec94
-# ╠═f3ee4c34-3c96-4254-aa07-34d67efaedc3
 # ╠═2a76c938-34a3-4539-9487-c691e16e69f8
 # ╠═88294f24-4876-4692-858b-c28c50986dea
 # ╠═f158c8de-3769-4e18-97e2-dfcc841f9306
