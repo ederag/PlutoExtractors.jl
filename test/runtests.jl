@@ -43,6 +43,10 @@ server_session.connected_clients[fakeclient.id] = fakeclient
 		include("notebooks/extract_from_source_consts.jl")
 	end
 
+	@testset "Extract from source_semicolon.jl" begin
+		include("notebooks/extract_from_source_semicolon.jl")
+	end
+
 	@testset "Extract from source_types.jl" begin
 		include("notebooks/extract_from_source_types.jl")
 	end
