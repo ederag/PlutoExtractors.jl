@@ -35,6 +35,10 @@ server_session.connected_clients[fakeclient.id] = fakeclient
 		include("notebooks/extract_from_source_basic.jl")
 	end
 	
+	@testset "Extract from source_comments.jl" begin
+		include("notebooks/extract_from_source_comments.jl")
+	end
+	
 	@testset "Extract from source_usings.jl" begin
 		include("notebooks/extract_from_source_usings.jl")
 	end
