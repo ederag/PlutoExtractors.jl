@@ -57,7 +57,19 @@ else
 		end
 	)
 	PlutoTest.@test fun1() == 1
+
+	@nb_extract(
+		source_path,
+		function fun2()
+			return b
+		end
+	)
+	# b definition is commented out, so
+	PlutoTest.@test_throws UndefVarError(:b) fun2() == 2
 end
+
+# ╔═╡ 2a62a946-1ca4-486a-a0b3-bbf9b251c373
+
 
 # ╔═╡ 343b1d66-2801-4c31-81f9-1c252bb4d337
 md"""
@@ -85,5 +97,6 @@ load_updated_topology(source_path,
 # ╟─214a48ea-1769-45c8-b113-bb17a1a766b7
 # ╠═2dff3de8-3643-4e30-8c18-5dbc54c123fd
 # ╠═b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
+# ╠═2a62a946-1ca4-486a-a0b3-bbf9b251c373
 # ╠═343b1d66-2801-4c31-81f9-1c252bb4d337
 # ╠═3570c682-0461-4908-b908-f0bc2cb4a1b4
