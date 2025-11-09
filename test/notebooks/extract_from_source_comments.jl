@@ -42,34 +42,29 @@ md"""
 # ╔═╡ 214a48ea-1769-45c8-b113-bb17a1a766b7
 md"## Just one variable"
 
-# ╔═╡ 2dff3de8-3643-4e30-8c18-5dbc54c123fd
-VERSION
+# ╔═╡ 3c1f9330-feba-48a5-b6b7-fc6c9f336929
+@nb_extract(
+	source_path,
+	function fun1()
+		return a
+	end
+)
 
-# ╔═╡ b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
-if VERSION > v"1.12"
-	PlutoTest.@test_broken load_updated_topology(source_path)
-else
-	utp = load_updated_topology(source_path)
-	@nb_extract(
-		source_path,
-		function fun1()
-			return a
-		end
-	)
-	PlutoTest.@test fun1() == 1
+# ╔═╡ a9437ca3-a038-42c8-9802-d3da71114ae5
+PlutoTest.@test fun1() == 1
 
-	@nb_extract(
+# ╔═╡ 50cd274c-1313-41fb-a4dc-bf2d2d8ae917
+@nb_extract(
 		source_path,
 		function fun2()
 			return b
 		end
 	)
-	# b definition is commented out, so
-	PlutoTest.@test_throws UndefVarError(:b) fun2() == 2
-end
+	
 
-# ╔═╡ 2a62a946-1ca4-486a-a0b3-bbf9b251c373
-
+# ╔═╡ a32303e6-b674-49ba-8a1a-3a3d2f5e520c
+# b definition is commented out, so
+PlutoTest.@test_throws UndefVarError(:b) fun2() == 2
 
 # ╔═╡ 343b1d66-2801-4c31-81f9-1c252bb4d337
 md"""
@@ -80,7 +75,7 @@ md"""
 # ╠═╡ skip_as_script = true
 #=╠═╡
 load_updated_topology(source_path,
-	get_code_expr = c -> (@debug(c.code); Meta.parse(c.code))
+	get_code_expr = c -> (@debug(c.code); PlutoExtractors.parse_custom(c.code))
 )
   ╠═╡ =#
 
@@ -95,8 +90,9 @@ load_updated_topology(source_path,
 # ╠═35bab28c-477c-43dd-b339-13cfdbf2f33e
 # ╟─89dd6ff4-2495-4bd1-96ef-8962f8041cf3
 # ╟─214a48ea-1769-45c8-b113-bb17a1a766b7
-# ╠═2dff3de8-3643-4e30-8c18-5dbc54c123fd
-# ╠═b9e09fd4-f34a-4c72-b979-09bb1b1b57e7
-# ╠═2a62a946-1ca4-486a-a0b3-bbf9b251c373
+# ╠═3c1f9330-feba-48a5-b6b7-fc6c9f336929
+# ╠═a9437ca3-a038-42c8-9802-d3da71114ae5
+# ╠═50cd274c-1313-41fb-a4dc-bf2d2d8ae917
+# ╠═a32303e6-b674-49ba-8a1a-3a3d2f5e520c
 # ╠═343b1d66-2801-4c31-81f9-1c252bb4d337
 # ╠═3570c682-0461-4908-b908-f0bc2cb4a1b4
