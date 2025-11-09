@@ -94,41 +94,6 @@ function load_nb_with_topology(path::AbstractString)
 	throw("Dropped in v0.2.0. Please use `load_updated_topology` instead")
 end
 
-# ╔═╡ 7e8a7524-1ae6-439d-98c6-5b2390014096
-"""
-    load_updated_topology(
-        path;
-        get_code_str = c -> c.code,
-        get_code_expr = c -> Meta.parse(c.code)
-    )
-
-Return the topology of a `Pluto` notebook found at `path`,
-with references and definitions filled.
-`get_code_str` and `get_code_expr` are passed to
-[`PlutoDependencyExplorer.updated_topology`](@ref);
-see that function doc for more details.
-
-See also [`@nb_extract`](@ref)
-"""
-function load_updated_topology(
-	path::AbstractString;
-	get_code_str = c -> c.code,
-	get_code_expr = c -> Meta.parse(c.code),
-)
-	nb = Pluto.load_notebook_nobackup(String(path))
-
-	empty_topology = PDE.NotebookTopology{Pluto.Cell}()
-
-	# cf. https://plutojl.org/en/docs/plutodependencyexplorer/
-	PDE.updated_topology(
-		empty_topology,  # old topology
-		PDE.all_cells(nb.topology),  # notebook cells
-		PDE.all_cells(nb.topology);  # cells to consider (they changed)
-		get_code_str,
-		get_code_expr,
-    )
-end
-
 # ╔═╡ b129127a-d2dc-490c-8f38-b0f210d3070c
 function template_analysis(template::Expr)
 	dict = MacroTools.splitdef(template)
@@ -273,13 +238,6 @@ macro nb_extract(source_path, template)
 	end
 end
 
-# ╔═╡ 36b59204-dada-4ad3-97f3-2aa2fdfc2617
-function get_topology_module_expr(module_sym, nb_path)
-	basic_utp = load_updated_topology(nb_path)
-	# utp is not complete yet, but enough to gather the module header
-	get_topology_module_expr(module_sym, basic_utp)
-end
-
 # ╔═╡ 9194537f-8d42-422b-afa2-f86933522efc
 function get_topology_module_expr(
 	module_name::Symbol,
@@ -362,59 +320,8 @@ function fake_bind_expr()
 	end
 end
 
-# ╔═╡ 56764600-5efa-45bd-bf9e-68dae3bde72c
-function collect_header_expressions(utp)
-	expressions = Expr[]
-	for cell in utp.cell_order
-		expr = Meta.parse(cell.code)
-		node = utp.nodes[cell]
-
-		# Pluto allows to write markdown strings
-		# without an explicit `using Markdown`.
-		if Symbol("@md_str") in node.macrocalls
-			push!(expressions, :(using Markdown))
-		end
-
-		# Need all usings and imports
-		# to create the full m.utp (with macroexpansion).
-		usings_imports = EE.compute_usings_imports(expr)
-		append!(expressions, usings_imports.usings)
-		append!(expressions, usings_imports.imports)
-	end
-	# Needed for update_with_macroexpand to succeed, if any @bind
-	expr = fake_bind_expr()
-	push!(expressions, expr)
-	expressions
-end
-
-# ╔═╡ 8dbffbe1-e925-4b18-b489-82e3ce03d206
-function get_topology_module_expr(module_sym, basic_utp::PDE.NotebookTopology)
-	header_expressions = collect_header_expressions(basic_utp)
-	module_expr = get_topology_module_expr(
-		module_sym,
-		basic_utp,
-		header_expressions,
-	)
-end
-
 # ╔═╡ db0b5056-849c-40a1-b2f7-b9d89ba3ea75
 get_cell_type(topology) = eltype(topology.cell_order)
-
-# ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
-function update_with_macroexpand(_module, topology::PDE.NotebookTopology)
-	cell_type = get_cell_type(topology)
-	empty_topology = PDE.NotebookTopology{cell_type}()
-	PDE.updated_topology(
-		empty_topology,  # old topology
-		PDE.all_cells(topology),  # notebook cells
-		PDE.all_cells(topology);  # cells to consider (they changed)
-		get_code_str = c -> c.code,
-		get_code_expr = c -> macroexpand(
-			_module,
-			Meta.parse(c.code)
-		)
-    )
-end
 
 # ╔═╡ 68af943e-a9ed-44e0-85a7-452fc62411ea
 # non-recursive version,
@@ -450,6 +357,134 @@ end
 # ╔═╡ 63c26add-ac5a-4a2c-9779-bd6c9710fe1a
 function remove_trailing_semicolon(str)
 	rstrip(c -> c == ';' || isspace(c), str)
+end
+
+# ╔═╡ c97c2cdf-388c-4696-91fc-6babbf237bf2
+# Taken from pluto.parse_custom(notebook, cell)
+"""
+    parse_custom(str)
+
+Parse the string `str` like Meta.parse, but
+don't error on trailing newlines or comments
+(https://github.com/JuliaLang/julia/issues/59935)
+and give more meaningful error upon "extra token after end of expression".
+"""
+function parse_custom(str)
+	parsed1, next_ind1 = Meta.parse(str, 1, raise=false)
+	parsed2, next_ind2 = Meta.parse(str, next_ind1, raise=false)
+
+	if parsed2 === nothing
+		# only whitespace or comments after the first expression
+		parsed1
+	else
+		message = """extra token after end of expression
+
+			While parsing: ```
+			$(str)
+			```
+			Parsed expression:
+			$(parsed1)
+			Extra expression/token:
+			$(parsed2)
+			Note: as in Pluto, only one expression per cell is allowed.
+			If the source code works in Pluto, then please do file an issue to
+			https://github.com/ederag/PlutoExtractors.jl/issues
+			"""
+		Expr(:error, message)
+	end
+end
+
+# ╔═╡ 7e8a7524-1ae6-439d-98c6-5b2390014096
+"""
+    load_updated_topology(
+        path;
+        get_code_str = c -> c.code,
+        get_code_expr = c -> PlutoExtractors.parse_custom(c.code)
+    )
+
+Return the topology of a `Pluto` notebook found at `path`,
+with references and definitions filled.
+`get_code_str` and `get_code_expr` are passed to
+[`PlutoDependencyExplorer.updated_topology`](@ref);
+see that function doc for more details.
+
+See also [`@nb_extract`](@ref)
+"""
+function load_updated_topology(
+	path::AbstractString;
+	get_code_str = c -> c.code,
+	get_code_expr = c -> parse_custom(c.code),
+)
+	nb = Pluto.load_notebook_nobackup(String(path))
+
+	empty_topology = PDE.NotebookTopology{Pluto.Cell}()
+
+	# cf. https://plutojl.org/en/docs/plutodependencyexplorer/
+	PDE.updated_topology(
+		empty_topology,  # old topology
+		PDE.all_cells(nb.topology),  # notebook cells
+		PDE.all_cells(nb.topology);  # cells to consider (they changed)
+		get_code_str,
+		get_code_expr,
+    )
+end
+
+# ╔═╡ 36b59204-dada-4ad3-97f3-2aa2fdfc2617
+function get_topology_module_expr(module_sym, nb_path)
+	basic_utp = load_updated_topology(nb_path)
+	# utp is not complete yet, but enough to gather the module header
+	get_topology_module_expr(module_sym, basic_utp)
+end
+
+# ╔═╡ 56764600-5efa-45bd-bf9e-68dae3bde72c
+function collect_header_expressions(utp)
+	expressions = Expr[]
+	for cell in utp.cell_order
+		expr = parse_custom(cell.code)
+		node = utp.nodes[cell]
+
+		# Pluto allows to write markdown strings
+		# without an explicit `using Markdown`.
+		if Symbol("@md_str") in node.macrocalls
+			push!(expressions, :(using Markdown))
+		end
+
+		# Need all usings and imports
+		# to create the full m.utp (with macroexpansion).
+		usings_imports = EE.compute_usings_imports(expr)
+		append!(expressions, usings_imports.usings)
+		append!(expressions, usings_imports.imports)
+	end
+	# Needed for update_with_macroexpand to succeed, if any @bind
+	expr = fake_bind_expr()
+	push!(expressions, expr)
+	expressions
+end
+
+# ╔═╡ 8dbffbe1-e925-4b18-b489-82e3ce03d206
+function get_topology_module_expr(module_sym, basic_utp::PDE.NotebookTopology)
+	header_expressions = collect_header_expressions(basic_utp)
+	module_expr = get_topology_module_expr(
+		module_sym,
+		basic_utp,
+		header_expressions,
+	)
+end
+
+# ╔═╡ 8b28bd70-e4d9-4b21-990b-0f072e6a8802
+function update_with_macroexpand(_module, topology::PDE.NotebookTopology)
+	cell_type = get_cell_type(topology)
+	empty_topology = PDE.NotebookTopology{cell_type}()
+	PDE.updated_topology(
+		empty_topology,  # old topology
+		PDE.all_cells(topology),  # notebook cells
+		PDE.all_cells(topology);  # cells to consider (they changed)
+		get_code_str = c -> c.code,
+		get_code_expr = c -> macroexpand(
+			_module,
+			parse_custom(c.code)
+		)
+    )
 end
 
 # ╔═╡ da3fb260-a858-457f-8430-c6a124d1d1e5
@@ -523,7 +558,7 @@ function split_destinations(
 	# First pass: find the cells that must be in the module toplevel
 	for cell in needed_cells
 		code_str = cell.code
-		code_expr = Meta.parse(code_str)
+		code_expr = parse_custom(code_str)
 		if has_usings_imports(code_expr) || defines_type(code_expr)
 			destinations[cell] = :module
 		end
@@ -534,7 +569,7 @@ function split_destinations(
 	dynamic_symbols = copy(given_symbols)
 	for cell in needed_cells
 		code_str = remove_trailing_semicolon(cell.code)
-		code_expr = Meta.parse(code_str)
+		code_expr = parse_custom(code_str)
 		node = utp.nodes[cell]
 		if any(in(dynamic_symbols), node.references)
 			get(destinations, cell, :none) === :module && error("""
@@ -597,7 +632,7 @@ function nb_extractor_core(
 	for cell in tpo.runnable ∩ needed_cells
 		# Fix "toplevel expression not at top level"
 		code_str = remove_trailing_semicolon(cell.code)
-		code_expr = Meta.parse(code_str)
+		code_expr = parse_custom(code_str)
 		check_safe_bind(code_expr, given_symbols)
 		# if not :function, than can be in the module toplevel by default
 		destination = get(destinations, cell, :module)
@@ -687,6 +722,7 @@ rm_all_lines(ex) = MacroTools.prewalk(MacroTools.rmlines, ex)
 # ╠═efa1e893-34b0-4a14-a0e2-600a365eb717
 # ╠═68af943e-a9ed-44e0-85a7-452fc62411ea
 # ╠═63c26add-ac5a-4a2c-9779-bd6c9710fe1a
+# ╠═c97c2cdf-388c-4696-91fc-6babbf237bf2
 # ╠═f4b031d7-8039-4b5b-9eca-89a2338c6b94
 # ╠═da3fb260-a858-457f-8430-c6a124d1d1e5
 # ╠═e4ecb782-85af-4e66-a7af-72eca79bd191
