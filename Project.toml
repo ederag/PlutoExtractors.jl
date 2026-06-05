@@ -1,7 +1,7 @@
 name = "PlutoExtractors"
 uuid = "25cc9095-8c7a-4c84-8905-c5de52e7766c"
-authors = ["ederag <edera@gmx.fr> and contributors"]
 version = "0.3.2"
+authors = ["ederag <edera@gmx.fr> and contributors"]
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -21,7 +21,7 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 BenchmarkTools = "1"
 ExpressionExplorer = "1"
 MacroTools = "0.5"
-Parameters = "0.12"
+Parameters = "0.12, 0.13"
 Pluto = "0.20"
 PlutoDependencyExplorer = "1"
 PlutoTest = "0.2"
